@@ -1,0 +1,75 @@
+---
+title: "Neural Networks in Practice: Exploring scorchR"
+output: html_document
+date: "2025-04-08"
+---
+
+## Introduction
+
+This exercise provides hands-on experience with neural network implementation and evaluation using the scorchR package ([GitHub repository](https://github.com/jtleek/scorcher/tree/main)). We will examine common assumptions about neural networks through practical application.
+
+## Task 1: Neural Network Implementation
+
+### Setup and Data Preparation
+
+1. Download and review the Palmer Penguin model template (`palmer-penguins.Rmd`). Ensure you can execute the file before proceeding. Pay particular attention to the preprocessing steps in the "Data Preprocessing" section.
+
+2. Download the Loan Application dataset (`Loan_Application_Data_subset.csv`), which contains 10,000 randomly selected records from the [2023 FFIEC national loan-level dataset](https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023). If execution time becomes a constraint, you may reduce the sample size to 2,000 (but not lower, to avoid potential instability).
+
+3. Extract and preprocess the relevant variables (`action_taken`, `income`, and `loan_amount`):
+   - Filter rows where `action_taken` is either 1 (loan approved), 3 (loan denied), or 4 (application withdrawn)
+   - Recode values for clarity: 3 → 2 and 4 → 3, creating a 1,2,3 class structure
+   - Remove entries with negative income values
+   - Apply log transformation to both `income` and `loan_amount` to normalize their distributions
+   - Remove any rows containing NA values in the three selected columns
+
+### Model Architecture and Training
+
+4. Construct a neural network with the following architecture:
+   - Input layer: Linear layer (2 × 16) [2 represents the number of input variables]
+   - Hidden layer: ReLU activation function
+   - Output layer: Linear layer (16 × 3) [3 represents the number of output classes]
+
+5. Train the model using the scorchR framework:
+   - Implement the `nn_cross_entropy_loss` function for loss calculation
+   - Apply appropriate weighting as demonstrated in the Penguin example
+
+### Model Evaluation
+
+6. Analyze model performance:
+   - Quantify prediction distribution across the three classes (approved loans, rejected loans, withdrawn applications)
+   - Calculate accuracy metrics
+   - Identify and implement more appropriate evaluation metrics for multi-class classification beyond raw accuracy
+
+## Task 2: Parameter Optimization
+
+This section examines how parameter modifications affect model behavior.
+
+### Batch Size Analysis
+
+Review the article on batch size effects ([Medium article](https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1fa)). Experiment with different batch sizes and document how they influence:
+- Execution time (use the `tictoc` package for measurement)
+- Model accuracy
+- Convergence speed (number of epochs required)
+
+### Network Architecture: Depth vs. Width
+
+Review the article comparing network depth and width ([Medium article](https://medium.com/@mysterious_obscure/deeper-or-wider-exploring-the-depths-and-breadths-of-neural-network-architectures-17127c135746)). Implement variations in network architecture to assess:
+- Whether the article's claims can be reproduced with our dataset
+- The relative performance of wider versus deeper network configurations
+
+## Task 3: Preprocessing Impact Assessment
+
+This section challenges the common assumption that neural networks can automatically determine optimal data representations without human intervention.
+
+### Raw Data Analysis
+
+1. Repeat Task 1 without log-transforming `income` and `loan_amount`:
+   - Evaluate the normality of the variables
+   - Compare model performance against the log-transformed version
+
+### Standardization Alternative
+
+2. Repeat Task 1 using standardization instead of log transformation for `income` and `loan_amount`:
+   - Assess variable normality
+   - Compare model performance with both the log-transformed and raw data approaches
