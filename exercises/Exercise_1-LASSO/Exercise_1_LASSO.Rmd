@@ -1,0 +1,50 @@
+---
+title: "Collinearity and LASSO"
+output: html_document
+date: "2025-04-07"
+---
+---
+title: "Investigating Collinearity Effects on LASSO Regression"
+output: html_document
+date: "2025-04-07"
+---
+
+## Introduction
+
+When implementing regression with LASSO regularization, collinearity between predictors can significantly impact model performance in several ways:
+
+1. Producing biased coefficient estimates
+2. Incorrectly selecting variables for exclusion from the model
+3. Inflating standard errors
+
+This exercise demonstrates how LASSO, while somewhat effective at addressing these issues under mild collinearity conditions, can exhibit compromised performance under high collinearity scenarios.
+
+## Exercise Objectives
+
+Your task is to implement the following experiment:
+
+### Data Generation
+1. Generate 1,000 samples where X₁, X₂, e, and ε follow a standard normal distribution (μ = 0, σ = 1)
+2. Create a collinear variable X₃ using the formula:
+   
+   X₃ = (2/3)X₁ + (2/3)X₂ + (1/3)e
+   
+   *Note: The standard deviation of e controls the degree of collinearity. Higher values reduce collinearity, while lower values increase it.*
+
+3. Calculate the correlation coefficients between X₁, X₂, and X₃ to quantify the collinearity.
+
+### Model Construction
+4. Create a response variable Y using the formula:
+   
+   Y = 2X₁ + 3X₂ + ε
+   
+   *Note: The true coefficients are β₁ = 2, β₂ = 3, and β₃ = 0 (X₃ is not related to Y). Ideally, LASSO should identify X₂ as the most significant predictor, X₁ as secondary, and X₃ as spuriously correlated.*
+
+### Analysis
+5. Using the provided template file (`LASSO_example.R`), regress Y on X₁, X₂, and X₃ and analyze the LASSO path.
+   - Compare the LASSO estimates to the true coefficients (β₁ = 2, β₂ = 3, β₃ = 0) for models with 3, 2, and 1 parameters
+   - Evaluate whether LASSO excluded variables in the correct order
+
+6. Repeat the analysis with varying standard deviations of e to examine how different degrees of collinearity affect LASSO's performance.
+   - Determine if increasing or decreasing collinearity brings the LASSO estimates closer to the true values
+ 
