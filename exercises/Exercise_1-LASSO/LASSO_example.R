@@ -9,6 +9,7 @@ epsilon = rnorm(n,mean = 0 ,sd=1)
 beta_1 = 0.5
 beta_2 = 0.9
 y = x_1 * beta_1 + x_2 * beta_2 + epsilon
+#note: Intercepts have to manually be added in the glmnet package
 X = cbind(1,x_1, x_2,x_3)
 
 
