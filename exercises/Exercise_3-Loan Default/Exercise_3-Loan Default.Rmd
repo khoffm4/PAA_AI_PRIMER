@@ -1,0 +1,61 @@
+## Study Design and Algorithmic Bias
+
+The principle "garbage in, garbage out" remains fundamental in data science. This exercise demonstrates how even well-implemented models cannot overcome the limitations of poor-quality data—a challenge that becomes increasingly significant in our current data landscape.
+
+### Objectives
+
+Our goal is this exercise is to illustrate how flaws in sampling design direct affect model predictions in ways that can perpetuate or amplify existing biases in various algorithmics. 
+
+
+### Procedure
+
+1. **Data Acquisition**
+   
+   Download the dataset `Loan_Application_Data_subset.csv`, containing 10,000 randomly selected records from the [2023 FFIEC national loan-level dataset](https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023), which encompasses national-level data on all home loans issued in the United States during 2023.
+
+2. **Data Partitioning**
+   
+   First remove any loans that were not accepted:
+   - A loan is denoted as accepted if it has loan_data$action_taken == 1
+   
+   Divide the dataset into two segments:
+   - Training set: First 3,000 loan records
+   - Test set: Remaining 1,955 loan records
+   
+   The training set will be used to develop a deliberately biased model to demonstrate how this bias affects subsequent analysis.
+   
+
+3. **Initial Data Analysis**
+   
+   Before manipulation, examine the dataset using linear regression and the LASSO model provided in `Lending_LASSO.R`. 
+   
+   -Make a model that predicts loan amount [loan_amount] based on income [income], interest rate [interest_rate], sex [derived_sex], and race [derived_race] of the applicant.
+   - Analyze the relationships between these predictor variables and loan amount
+   - Compare LASSO results with standard linear regression outputs
+  
+
+4. **Creating a Biased Dataset**
+   
+   To mimic the effect of a biased sample design, create a new dataset from the training data which oversamples low income female. For each datapoints in this biased sample:
+   - Include female applicants with less than the median loan amount with 80% probability
+   - Include non-female applicants (male, joint, or undisclosed) with 20% probability
+   
+5. **Model Comparison**
+   
+   - Fit a linear regression to both the biased and unbiased training dataset.
+   - Generate loan amount predictions using the biased and unbiased linear regressions
+   - Compare the predictions made using the biased and unbiased linear regressions. Are there any patterns in the errors?
+   - Analyze prediction accuracy stratified by applicant demographics and identify whether certain groups receive better or worse estimates
+   -If time, repeat the above with LASSO and random Forest
+   
+
+
+6. **Sensitivity Analysis**
+   
+   Vary the 80/20 probability split used in step 4 to create datasets with different levels of bias:
+   - Implement a range of sampling probabilities
+   - Assess how varying degrees of sampling bias affect prediction accuracy
+   - Determine the threshold at which sampling bias begins to significantly compromise model performance
+   - Establish criteria for "reasonable" accuracy and identify the maximum tolerable sampling bias
+   
+   
