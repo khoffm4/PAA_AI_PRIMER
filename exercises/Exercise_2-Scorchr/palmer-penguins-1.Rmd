@@ -41,7 +41,7 @@ Before we begin, ensure that you have the necessary packages installed. You can 
 install.packages("pak")
 library(pak)
 pak::pak("jtleek/scorcher")
-install_torch()
+#install_torch()
 
 install.packages("tidyverse")
 install.packages("ggimage")
