@@ -1,0 +1,410 @@
+---
+title: "Fitting Neural Networks with Scorcher using the Palmer Penguins Dataset"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fitting Neural Networks with Scorcher using the Palmer Penguins Dataset}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  comment = "#>",
+  out.width = "100%",
+  fig.retina = 2,
+  fig.align = 'center'
+)
+```
+
+
+
+```{r install, eval = F}
+install.packages("pak")
+library(pak)
+pak::pak("jtleek/scorcher")
+#install_torch() //this line gives error "cannot find install_torcher()"
+
+install.packages("tidyverse")
+install.packages("ggimage")
+install.packages("torch")
+#install.packages("scorcher")
+install.packages("palmerpenguins")
+```
+
+Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
+
+```{r setup}
+library(tidyverse)
+library(ggimage)
+library(torch)
+library(scorcher)
+library(palmerpenguins)
+```
+
+## Task 1: Fitting a Network:
+
+
+Download the Loan application dataset which Loan_Application_Data_subset.csv    Download Loan_Application_Data_subset.csv   This is data is 10,000 randomly chosen datapoints from https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023Links to an external site. which consists of national-level data on all home loans issued in 2023 in the US.   [With any of the steps below, if runtime becomes a bottleneck, you can go down to 2,000 samples (any lower and you may risk unstable behavior)] 
+
+```{r}
+df <- read.csv("Loan_Application_Data_subset-1.csv")
+```
+
+ 
+
+Select the 'action_taken', 'income', and 'loan_amount' from the datasets. Our goal is to make a network that will use income and loan amount to predict action_take. To do this first perform the following preprocessing:
+
+```{r}
+df1 <- df %>% select(action_taken, income, loan_amount)
+```
+
+
+Remove any rows where action_taken [what happened with the loan]  is not 1 [loan approved] , 3 [loan denied], or 4 [application withdrawn by applicant]
+Recode 3 -> 2 and 4->3 . This makes the classes 1,2,3 instead of 1,3,4 which just makes the code neater remove any rows with income = 0
+
+```{r}
+df1 <- df1 %>% filter(action_taken %in% c(1,3,4), income!=0)
+df1 <- df1 %>% mutate(action_taken = case_when(
+  action_taken==1 ~ 1,
+  action_taken==3 ~ 2,
+  action_taken==4 ~ 3))
+
+```
+
+Take the log transform of income [note that this transform makes the loan amount distribution look normal ]
+Take the log transform of  loan amount [note that this transform makes the loan amount distribution look normal ]
+Remove any rows with NA in any of the 3 columns
+
+```{r}
+df1$loan_amount <- log(df1$loan_amount)
+df1$income <- log(df1$income)
+df1 <- df1[complete.cases(df1), ]
+```
+
+## **Define a network with the following architecture:**
+- Start with a 3 x 16 linear layer [The first 3 is for the # of variables]
+- Then have a Relu Layer
+- Then a 16 x 3 linear linear  [The final 3 is for the number of classes we are classifying. The fact its the same as the first 3 is a coincidence ]
+
+
+### Creating Training and Test Sets
+
+Next, we'll split the data into training and test sets.
+
+```{r}
+set.seed(123)
+
+train_indices <- sample(1:nrow(df1), 0.8 * nrow(df1))
+train_data <- df1[train_indices, ]
+test_data <- df1[-train_indices, ]
+```
+
+## Using Scorcher
+
+### Defining the Neural Network
+
+Next, we'll define our neural network using the `scorcher` package.
+
+```{r}
+# Create the dataloader
+
+x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
+y_train <- torch_tensor(as.integer(train_data$action_taken), dtype = torch_long())
+
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 32)
+
+# Define the neural network
+
+#n_var = dim(df1)[2]
+n_var = 2
+n_classes = length(unique(df1$action_taken))
+
+scorch_model <- dl |> 
+  initiate_scorch() |> 
+  scorch_layer("linear", n_var, 16) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 16, n_classes)
+
+scorch_model
+# Compile the neural network
+
+compiled_scorch_model <- scorch_model |>
+  compile_scorch()
+```
+
+5. Fit the scorchR model. Use nn_cross_entropy_loss for the loss function and weights in the same way as in the Penguin example
+
+
+### Training the Neural Network
+
+We'll train our neural network on the training data.
+
+```{r}
+# Define weights for imbalanced classes
+
+weight <- length(train_data$action_taken) /
+  (n_classes * torch_stack(lapply(1:n_classes, function(i) sum(train_data$action_taken == i))))
+
+weight <- weight$squeeze()
+
+# Fit the neural network
+
+fitted_scorch_model <- compiled_scorch_model |> 
+  fit_scorch(
+    loss = nn_cross_entropy_loss,
+    loss_params = list(weight = weight),
+    num_epochs = 200, 
+    verbose = T)
+```
+
+### Evaluating the Model
+
+Finally, we'll evaluate our model on the test data.
+
+```{r}
+
+fitted_scorch_model$eval()
+
+x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
+y_test <- torch_tensor(as.integer(test_data$action_taken), dtype = torch_long())
+
+output <- fitted_scorch_model(x_test)
+pred <- torch_argmax(output, dim = 2)
+
+accuracy <- sum(pred == y_test)$item() / length(y_test)
+cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+
+```
+
+
+6. Compute how many times the model predicted 1 [loan approved] 2 [loan rejected] and 3 [application widthdrawn] by the model. How accurate is this? Is there a better metric for evaluating multi-class classification than raw accuracy? If so, compute that as well
+
+```{r}
+
+```
+
+
+# Task 2: Changing some parameters
+
+Here our goal is to see how the model changes to modification in parameteres
+Read about the effect of batch size https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1faLinks to an external site.. (available offline here: How does Batch Size impact your model learning | by Devansh | Geek Culture | Medium.pdf )  Now modify your batch size and see if you can replicate the claims in the article. How much does batch size affect runtime? Accuracy? Number of epochs needed for the model to converge?  To Compute runtime, take a look at the tictoc package in R. 
+Read about the effect of network depth vs width https://medium.com/@mysterious_obscure/deeper-or-wider-exploring-the-depths-and-breadths-of-neural-network-architectures-17127c135746Links to an external site. (available offline: Deeper or Wider: Exploring the Depths and Breadths of Neural Network Architectures | by Mysterious obscure | Medium.pdf). Can you replicate the claims in the article? Do you find that wider or longer networks perform better?
+
+
+```{r}
+
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 50)
+
+# Define the neural network
+
+#n_var = dim(df1)[2]
+n_var = 2
+n_classes = length(unique(df1$action_taken))
+
+scorch_model <- dl |> 
+  initiate_scorch() |> 
+  scorch_layer("linear", n_var, 16) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 16, n_classes)
+
+scorch_model
+# Compile the neural network
+
+compiled_scorch_model <- scorch_model |>
+  compile_scorch()
+
+# Define weights for imbalanced classes
+
+weight <- length(train_data$action_taken) /
+  (n_classes * torch_stack(lapply(1:n_classes, function(i) sum(train_data$action_taken == i))))
+
+weight <- weight$squeeze()
+
+# Fit the neural network
+
+fitted_scorch_model <- compiled_scorch_model |> 
+  fit_scorch(
+    loss = nn_cross_entropy_loss,
+    loss_params = list(weight = weight),
+    num_epochs = 200, 
+    verbose = T)
+
+
+fitted_scorch_model$eval()
+
+x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
+y_test <- torch_tensor(as.integer(test_data$action_taken), dtype = torch_long())
+
+output <- fitted_scorch_model(x_test)
+pred <- torch_argmax(output, dim = 2)
+
+accuracy <- sum(pred == y_test)$item() / length(y_test)
+cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+
+```
+
+
+> Above we can see that increasing the batch size increases the accuracy and the computing speed due to fewer updates.
+
+# Task 3: The Role of preprocessing and human intervention
+
+A common myth with neural networks is that since the network is flexible enough to find the best preprocessing of your data to achieve maximum accuracy, there is no need for human-preprocessing. While this is debatable in ideal theoretical situations (such as networks with infinite numbers of nodes or layers and unlimited compute time), in many practical situations, common preprocessing can still immensely help the fitting of the network. To demonstrate:
+
+1. Do the same procedure as Task 1, but do not log transform income or loan_amount. How normal are the variables? What happens to the model's performance?
+
+
+```{r}
+df2 <- df %>% select(action_taken, income, loan_amount)
+
+df2 <- df2 %>% filter(action_taken %in% c(1,3,4), income>0)
+df2 <- df2 %>% mutate(action_taken = case_when(
+  action_taken==1 ~ 1,
+  action_taken==3 ~ 2,
+  action_taken==4 ~ 3))
+
+
+df2 <- df2[complete.cases(df2), ]
+
+set.seed(123)
+
+train_indices <- sample(1:nrow(df2), 0.8 * nrow(df2))
+train_data <- df2[train_indices, ]
+test_data <- df2[-train_indices, ]
+
+# Create the dataloader
+
+x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
+y_train <- torch_tensor(as.integer(train_data$action_taken), dtype = torch_long())
+
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 50)
+
+# Define the neural network
+
+#n_var = dim(df1)[2]
+n_var = 2
+n_classes = length(unique(df2$action_taken))
+
+scorch_model <- dl |> 
+  initiate_scorch() |> 
+  scorch_layer("linear", n_var, 16) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 16, n_classes)
+
+scorch_model
+# Compile the neural network
+
+compiled_scorch_model <- scorch_model |>
+  compile_scorch()
+
+# Define weights for imbalanced classes
+
+weight <- length(train_data$action_taken) /
+  (n_classes * torch_stack(lapply(1:n_classes, function(i) sum(train_data$action_taken == i))))
+
+weight <- weight$squeeze()
+
+# Fit the neural network
+
+fitted_scorch_model <- compiled_scorch_model |> 
+  fit_scorch(
+    loss = nn_cross_entropy_loss,
+    loss_params = list(weight = weight),
+    num_epochs = 200, 
+    verbose = T)
+
+
+fitted_scorch_model$eval()
+
+x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
+y_test <- torch_tensor(as.integer(test_data$action_taken), dtype = torch_long())
+
+output <- fitted_scorch_model(x_test)
+pred <- torch_argmax(output, dim = 2)
+
+accuracy <- sum(pred == y_test)$item() / length(y_test)
+cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+
+```
+
+> No log variables produces less accurate estimates
+
+2. Do the same as Task 1 but standardize income and loan_amount instead of log transform it. How normal are the variables? What happens to the model's performance?
+
+```{r}
+df2 <- df %>% select(action_taken, income, loan_amount)
+
+df2 <- df2 %>% filter(action_taken %in% c(1,3,4), income>0)
+df2 <- df2 %>% mutate(action_taken = case_when(
+  action_taken==1 ~ 1,
+  action_taken==3 ~ 2,
+  action_taken==4 ~ 3))
+df2$income <- scale(df2$income)
+df2$loan_amount <- scale(df2$loan_amount)
+
+df2 <- df2[complete.cases(df2), ]
+
+set.seed(123)
+
+train_indices <- sample(1:nrow(df2), 0.8 * nrow(df2))
+train_data <- df2[train_indices, ]
+test_data <- df2[-train_indices, ]
+
+# Create the dataloader
+
+x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
+y_train <- torch_tensor(as.integer(train_data$action_taken), dtype = torch_long())
+
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 50)
+
+# Define the neural network
+
+#n_var = dim(df1)[2]
+n_var = 2
+n_classes = length(unique(df2$action_taken))
+
+scorch_model <- dl |> 
+  initiate_scorch() |> 
+  scorch_layer("linear", n_var, 16) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 16, n_classes)
+
+scorch_model
+# Compile the neural network
+
+compiled_scorch_model <- scorch_model |>
+  compile_scorch()
+
+# Define weights for imbalanced classes
+
+weight <- length(train_data$action_taken) /
+  (n_classes * torch_stack(lapply(1:n_classes, function(i) sum(train_data$action_taken == i))))
+
+weight <- weight$squeeze()
+
+# Fit the neural network
+
+fitted_scorch_model <- compiled_scorch_model |> 
+  fit_scorch(
+    loss = nn_cross_entropy_loss,
+    loss_params = list(weight = weight),
+    num_epochs = 200, 
+    verbose = T)
+
+
+fitted_scorch_model$eval()
+
+x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
+y_test <- torch_tensor(as.integer(test_data$action_taken), dtype = torch_long())
+
+output <- fitted_scorch_model(x_test)
+pred <- torch_argmax(output, dim = 2)
+
+accuracy <- sum(pred == y_test)$item() / length(y_test)
+cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+
+```
+> The accuracy was the lowest using the normalized data!

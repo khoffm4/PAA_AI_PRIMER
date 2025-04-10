@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Fitting Neural Networks with Scorcher using the Palmer Penguins Dataset</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Fitting Neural Networks with Scorcher using
+the Palmer Penguins Dataset</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;pak&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(pak)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;jtleek/scorcher&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#install_torch() //this line gives error &quot;cannot find install_torcher()&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;tidyverse&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;ggimage&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;torch&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#install.packages(&quot;scorcher&quot;)</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;palmerpenguins&quot;</span>)</span></code></pre></div>
+<p>Additionally, you’ll need to install torch dependencies. Follow the
+instructions provided <a href="https://torch.mlverse.org/start/installation/">here</a> to install
+torch. Then, you can load the <code>scorcher</code> library and the
+other necessary libraries for this analysis with:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(ggimage)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">library</span>(torch)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">library</span>(scorcher)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">library</span>(palmerpenguins)</span></code></pre></div>
+<div id="task-1-fitting-a-network" class="section level2">
+<h2>Task 1: Fitting a Network:</h2>
+<p>Download the Loan application dataset which
+Loan_Application_Data_subset.csv Download
+Loan_Application_Data_subset.csv This is data is 10,000 randomly chosen
+datapoints from <a href="https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023Links" class="uri">https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023Links</a>
+to an external site. which consists of national-level data on all home
+loans issued in 2023 in the US. [With any of the steps below, if runtime
+becomes a bottleneck, you can go down to 2,000 samples (any lower and
+you may risk unstable behavior)]</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;Loan_Application_Data_subset-1.csv&quot;</span>)</span></code></pre></div>
+<p>Select the ‘action_taken’, ‘income’, and ‘loan_amount’ from the
+datasets. Our goal is to make a network that will use income and loan
+amount to predict action_take. To do this first perform the following
+preprocessing:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>df1 <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span> <span class="fu">select</span>(action_taken, income, loan_amount)</span></code></pre></div>
+<p>Remove any rows where action_taken [what happened with the loan] is
+not 1 [loan approved] , 3 [loan denied], or 4 [application withdrawn by
+applicant] Recode 3 -&gt; 2 and 4-&gt;3 . This makes the classes 1,2,3
+instead of 1,3,4 which just makes the code neater remove any rows with
+income = 0</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>df1 <span class="ot">&lt;-</span> df1 <span class="sc">%&gt;%</span> <span class="fu">filter</span>(action_taken <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>), income<span class="sc">!=</span><span class="dv">0</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>df1 <span class="ot">&lt;-</span> df1 <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">action_taken =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">1</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">3</span> <span class="sc">~</span> <span class="dv">2</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">4</span> <span class="sc">~</span> <span class="dv">3</span>))</span></code></pre></div>
+<p>Take the log transform of income [note that this transform makes the
+loan amount distribution look normal ] Take the log transform of loan
+amount [note that this transform makes the loan amount distribution look
+normal ] Remove any rows with NA in any of the 3 columns</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>df1<span class="sc">$</span>loan_amount <span class="ot">&lt;-</span> <span class="fu">log</span>(df1<span class="sc">$</span>loan_amount)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>df1<span class="sc">$</span>income <span class="ot">&lt;-</span> <span class="fu">log</span>(df1<span class="sc">$</span>income)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>df1 <span class="ot">&lt;-</span> df1[<span class="fu">complete.cases</span>(df1), ]</span></code></pre></div>
+</div>
+<div id="define-a-network-with-the-following-architecture" class="section level2">
+<h2><strong>Define a network with the following
+architecture:</strong></h2>
+<ul>
+<li>Start with a 3 x 16 linear layer [The first 3 is for the # of
+variables]</li>
+<li>Then have a Relu Layer</li>
+<li>Then a 16 x 3 linear linear [The final 3 is for the number of
+classes we are classifying. The fact its the same as the first 3 is a
+coincidence ]</li>
+</ul>
+<div id="creating-training-and-test-sets" class="section level3">
+<h3>Creating Training and Test Sets</h3>
+<p>Next, we’ll split the data into training and test sets.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>train_indices <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(df1), <span class="fl">0.8</span> <span class="sc">*</span> <span class="fu">nrow</span>(df1))</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> df1[train_indices, ]</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> df1[<span class="sc">-</span>train_indices, ]</span></code></pre></div>
+</div>
+</div>
+<div id="using-scorcher" class="section level2">
+<h2>Using Scorcher</h2>
+<div id="defining-the-neural-network" class="section level3">
+<h3>Defining the Neural Network</h3>
+<p>Next, we’ll define our neural network using the <code>scorcher</code>
+package.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Create the dataloader</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>x_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(train_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>y_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(train_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>dl <span class="ot">&lt;-</span> <span class="fu">scorch_create_dataloader</span>(x_train, y_train, <span class="at">batch_size =</span> <span class="dv">32</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co"># Define the neural network</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#n_var = dim(df1)[2]</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>n_var <span class="ot">=</span> <span class="dv">2</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>n_classes <span class="ot">=</span> <span class="fu">length</span>(<span class="fu">unique</span>(df1<span class="sc">$</span>action_taken))</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>scorch_model <span class="ot">&lt;-</span> dl <span class="sc">|&gt;</span> </span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="fu">initiate_scorch</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, n_var, <span class="dv">16</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;relu&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, <span class="dv">16</span>, n_classes)</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>scorch_model</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; This scorch model has a dataloader object with features: </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; This is a dataloader object with features:</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;  * Batch size: 32</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;  * Number of batches: 188</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;  * Dimension of input tensors: 2</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;  * Dimension of output tensors: 1</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;  and model architecture:</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; * Layer 1 is a nn_linear layer</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; * Layer 2 is a nn_relu layer</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; * Layer 3 is a nn_linear layer</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co"># Compile the neural network</span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a>compiled_scorch_model <span class="ot">&lt;-</span> scorch_model <span class="sc">|&gt;</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a>  <span class="fu">compile_scorch</span>()</span></code></pre></div>
+<ol start="5" style="list-style-type: decimal">
+<li>Fit the scorchR model. Use nn_cross_entropy_loss for the loss
+function and weights in the same way as in the Penguin example</li>
+</ol>
+</div>
+<div id="training-the-neural-network" class="section level3">
+<h3>Training the Neural Network</h3>
+<p>We’ll train our neural network on the training data.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Define weights for imbalanced classes</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>weight <span class="ot">&lt;-</span> <span class="fu">length</span>(train_data<span class="sc">$</span>action_taken) <span class="sc">/</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  (n_classes <span class="sc">*</span> <span class="fu">torch_stack</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span>n_classes, <span class="cf">function</span>(i) <span class="fu">sum</span>(train_data<span class="sc">$</span>action_taken <span class="sc">==</span> i))))</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>weight <span class="ot">&lt;-</span> weight<span class="sc">$</span><span class="fu">squeeze</span>()</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co"># Fit the neural network</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>fitted_scorch_model <span class="ot">&lt;-</span> compiled_scorch_model <span class="sc">|&gt;</span> </span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  <span class="fu">fit_scorch</span>(</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    <span class="at">loss =</span> nn_cross_entropy_loss,</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    <span class="at">loss_params =</span> <span class="fu">list</span>(<span class="at">weight =</span> weight),</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="at">num_epochs =</span> <span class="dv">200</span>, </span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    <span class="at">verbose =</span> T)</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; No GPU detected. Using available CPU.</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; Epoch 1, Loss: 1.10950809209905 </span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; Epoch 2, Loss: 1.09269908768065 </span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; Epoch 3, Loss: 1.09298539161682 </span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; Epoch 4, Loss: 1.09266573761372 </span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; Epoch 5, Loss: 1.09053961140044 </span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; Epoch 6, Loss: 1.09154556406305 </span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; Epoch 7, Loss: 1.08997426831976 </span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; Epoch 8, Loss: 1.08870432351498 </span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; Epoch 9, Loss: 1.08757439002078 </span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; Epoch 10, Loss: 1.08793975951824 </span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; Epoch 11, Loss: 1.08581363140269 </span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt; Epoch 12, Loss: 1.084853791176 </span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; Epoch 13, Loss: 1.08382199799761 </span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; Epoch 14, Loss: 1.08284263598158 </span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; Epoch 15, Loss: 1.08255864552995 </span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; Epoch 16, Loss: 1.07928596468682 </span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt; Epoch 17, Loss: 1.07961312094901 </span></span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="co">#&gt; Epoch 18, Loss: 1.07852990766789 </span></span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt; Epoch 19, Loss: 1.07607017394076 </span></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co">#&gt; Epoch 20, Loss: 1.0762367302433 </span></span>
+<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="co">#&gt; Epoch 21, Loss: 1.07540873136926 </span></span>
+<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="co">#&gt; Epoch 22, Loss: 1.07354195891543 </span></span>
+<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="co">#&gt; Epoch 23, Loss: 1.07347121898164 </span></span>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; Epoch 24, Loss: 1.07256557903391 </span></span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; Epoch 25, Loss: 1.07436854376438 </span></span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; Epoch 26, Loss: 1.07205165193436 </span></span>
+<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; Epoch 27, Loss: 1.06954028948824 </span></span>
+<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="co">#&gt; Epoch 28, Loss: 1.07311172117578 </span></span>
+<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="co">#&gt; Epoch 29, Loss: 1.07019679787311 </span></span>
+<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co">#&gt; Epoch 30, Loss: 1.06968992821714 </span></span>
+<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="co">#&gt; Epoch 31, Loss: 1.06871645469615 </span></span>
+<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="co">#&gt; Epoch 32, Loss: 1.06935379638317 </span></span>
+<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="co">#&gt; Epoch 33, Loss: 1.06853297955178 </span></span>
+<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="co">#&gt; Epoch 34, Loss: 1.06666670612832 </span></span>
+<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="co">#&gt; Epoch 35, Loss: 1.06525082093604 </span></span>
+<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="co">#&gt; Epoch 36, Loss: 1.06694964208501 </span></span>
+<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="co">#&gt; Epoch 37, Loss: 1.06641030343289 </span></span>
+<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="co">#&gt; Epoch 38, Loss: 1.06715665599133 </span></span>
+<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="co">#&gt; Epoch 39, Loss: 1.06544282049575 </span></span>
+<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="co">#&gt; Epoch 40, Loss: 1.06478286772332 </span></span>
+<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="co">#&gt; Epoch 41, Loss: 1.06403352161671 </span></span>
+<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="co">#&gt; Epoch 42, Loss: 1.06497492435131 </span></span>
+<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="co">#&gt; Epoch 43, Loss: 1.0650026030997 </span></span>
+<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="co">#&gt; Epoch 44, Loss: 1.06439144180176 </span></span>
+<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="co">#&gt; Epoch 45, Loss: 1.061257502183 </span></span>
+<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="co">#&gt; Epoch 46, Loss: 1.06228328829116 </span></span>
+<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a><span class="co">#&gt; Epoch 47, Loss: 1.06301579893904 </span></span>
+<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a><span class="co">#&gt; Epoch 48, Loss: 1.06126260694037 </span></span>
+<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a><span class="co">#&gt; Epoch 49, Loss: 1.06258546481741 </span></span>
+<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a><span class="co">#&gt; Epoch 50, Loss: 1.06275407209041 </span></span>
+<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a><span class="co">#&gt; Epoch 51, Loss: 1.06344777345657 </span></span>
+<span id="cb9-69"><a href="#cb9-69" tabindex="-1"></a><span class="co">#&gt; Epoch 52, Loss: 1.05985596807713 </span></span>
+<span id="cb9-70"><a href="#cb9-70" tabindex="-1"></a><span class="co">#&gt; Epoch 53, Loss: 1.05882221175001 </span></span>
+<span id="cb9-71"><a href="#cb9-71" tabindex="-1"></a><span class="co">#&gt; Epoch 54, Loss: 1.05910427424502 </span></span>
+<span id="cb9-72"><a href="#cb9-72" tabindex="-1"></a><span class="co">#&gt; Epoch 55, Loss: 1.06018051061224 </span></span>
+<span id="cb9-73"><a href="#cb9-73" tabindex="-1"></a><span class="co">#&gt; Epoch 56, Loss: 1.05983629600799 </span></span>
+<span id="cb9-74"><a href="#cb9-74" tabindex="-1"></a><span class="co">#&gt; Epoch 57, Loss: 1.05955000538775 </span></span>
+<span id="cb9-75"><a href="#cb9-75" tabindex="-1"></a><span class="co">#&gt; Epoch 58, Loss: 1.0573823081052 </span></span>
+<span id="cb9-76"><a href="#cb9-76" tabindex="-1"></a><span class="co">#&gt; Epoch 59, Loss: 1.05863546817861 </span></span>
+<span id="cb9-77"><a href="#cb9-77" tabindex="-1"></a><span class="co">#&gt; Epoch 60, Loss: 1.05856578939773 </span></span>
+<span id="cb9-78"><a href="#cb9-78" tabindex="-1"></a><span class="co">#&gt; Epoch 61, Loss: 1.05877397574009 </span></span>
+<span id="cb9-79"><a href="#cb9-79" tabindex="-1"></a><span class="co">#&gt; Epoch 62, Loss: 1.05625992918268 </span></span>
+<span id="cb9-80"><a href="#cb9-80" tabindex="-1"></a><span class="co">#&gt; Epoch 63, Loss: 1.05702978657915 </span></span>
+<span id="cb9-81"><a href="#cb9-81" tabindex="-1"></a><span class="co">#&gt; Epoch 64, Loss: 1.05945780492843 </span></span>
+<span id="cb9-82"><a href="#cb9-82" tabindex="-1"></a><span class="co">#&gt; Epoch 65, Loss: 1.05629467234967 </span></span>
+<span id="cb9-83"><a href="#cb9-83" tabindex="-1"></a><span class="co">#&gt; Epoch 66, Loss: 1.0562530854281 </span></span>
+<span id="cb9-84"><a href="#cb9-84" tabindex="-1"></a><span class="co">#&gt; Epoch 67, Loss: 1.05529849358062 </span></span>
+<span id="cb9-85"><a href="#cb9-85" tabindex="-1"></a><span class="co">#&gt; Epoch 68, Loss: 1.05757584216747 </span></span>
+<span id="cb9-86"><a href="#cb9-86" tabindex="-1"></a><span class="co">#&gt; Epoch 69, Loss: 1.05596541629193 </span></span>
+<span id="cb9-87"><a href="#cb9-87" tabindex="-1"></a><span class="co">#&gt; Epoch 70, Loss: 1.05638619528172 </span></span>
+<span id="cb9-88"><a href="#cb9-88" tabindex="-1"></a><span class="co">#&gt; Epoch 71, Loss: 1.05591767233737 </span></span>
+<span id="cb9-89"><a href="#cb9-89" tabindex="-1"></a><span class="co">#&gt; Epoch 72, Loss: 1.05517186382984 </span></span>
+<span id="cb9-90"><a href="#cb9-90" tabindex="-1"></a><span class="co">#&gt; Epoch 73, Loss: 1.05497760468341 </span></span>
+<span id="cb9-91"><a href="#cb9-91" tabindex="-1"></a><span class="co">#&gt; Epoch 74, Loss: 1.05676811965222 </span></span>
+<span id="cb9-92"><a href="#cb9-92" tabindex="-1"></a><span class="co">#&gt; Epoch 75, Loss: 1.05702761100962 </span></span>
+<span id="cb9-93"><a href="#cb9-93" tabindex="-1"></a><span class="co">#&gt; Epoch 76, Loss: 1.05576652320141 </span></span>
+<span id="cb9-94"><a href="#cb9-94" tabindex="-1"></a><span class="co">#&gt; Epoch 77, Loss: 1.05675570413153 </span></span>
+<span id="cb9-95"><a href="#cb9-95" tabindex="-1"></a><span class="co">#&gt; Epoch 78, Loss: 1.05427084070571 </span></span>
+<span id="cb9-96"><a href="#cb9-96" tabindex="-1"></a><span class="co">#&gt; Epoch 79, Loss: 1.05420919523594 </span></span>
+<span id="cb9-97"><a href="#cb9-97" tabindex="-1"></a><span class="co">#&gt; Epoch 80, Loss: 1.0548272370658 </span></span>
+<span id="cb9-98"><a href="#cb9-98" tabindex="-1"></a><span class="co">#&gt; Epoch 81, Loss: 1.05397173445275 </span></span>
+<span id="cb9-99"><a href="#cb9-99" tabindex="-1"></a><span class="co">#&gt; Epoch 82, Loss: 1.05533492216404 </span></span>
+<span id="cb9-100"><a href="#cb9-100" tabindex="-1"></a><span class="co">#&gt; Epoch 83, Loss: 1.05401559427698 </span></span>
+<span id="cb9-101"><a href="#cb9-101" tabindex="-1"></a><span class="co">#&gt; Epoch 84, Loss: 1.05675153053821 </span></span>
+<span id="cb9-102"><a href="#cb9-102" tabindex="-1"></a><span class="co">#&gt; Epoch 85, Loss: 1.05299654444481 </span></span>
+<span id="cb9-103"><a href="#cb9-103" tabindex="-1"></a><span class="co">#&gt; Epoch 86, Loss: 1.05302450314481 </span></span>
+<span id="cb9-104"><a href="#cb9-104" tabindex="-1"></a><span class="co">#&gt; Epoch 87, Loss: 1.05556228534972 </span></span>
+<span id="cb9-105"><a href="#cb9-105" tabindex="-1"></a><span class="co">#&gt; Epoch 88, Loss: 1.05225586225378 </span></span>
+<span id="cb9-106"><a href="#cb9-106" tabindex="-1"></a><span class="co">#&gt; Epoch 89, Loss: 1.05471323493947 </span></span>
+<span id="cb9-107"><a href="#cb9-107" tabindex="-1"></a><span class="co">#&gt; Epoch 90, Loss: 1.05324323665588 </span></span>
+<span id="cb9-108"><a href="#cb9-108" tabindex="-1"></a><span class="co">#&gt; Epoch 91, Loss: 1.05399721448726 </span></span>
+<span id="cb9-109"><a href="#cb9-109" tabindex="-1"></a><span class="co">#&gt; Epoch 92, Loss: 1.05276781066935 </span></span>
+<span id="cb9-110"><a href="#cb9-110" tabindex="-1"></a><span class="co">#&gt; Epoch 93, Loss: 1.05449362257694 </span></span>
+<span id="cb9-111"><a href="#cb9-111" tabindex="-1"></a><span class="co">#&gt; Epoch 94, Loss: 1.05425089248951 </span></span>
+<span id="cb9-112"><a href="#cb9-112" tabindex="-1"></a><span class="co">#&gt; Epoch 95, Loss: 1.05515428680055 </span></span>
+<span id="cb9-113"><a href="#cb9-113" tabindex="-1"></a><span class="co">#&gt; Epoch 96, Loss: 1.05231208211564 </span></span>
+<span id="cb9-114"><a href="#cb9-114" tabindex="-1"></a><span class="co">#&gt; Epoch 97, Loss: 1.05401326081854 </span></span>
+<span id="cb9-115"><a href="#cb9-115" tabindex="-1"></a><span class="co">#&gt; Epoch 98, Loss: 1.05301107402812 </span></span>
+<span id="cb9-116"><a href="#cb9-116" tabindex="-1"></a><span class="co">#&gt; Epoch 99, Loss: 1.05252238569107 </span></span>
+<span id="cb9-117"><a href="#cb9-117" tabindex="-1"></a><span class="co">#&gt; Epoch 100, Loss: 1.05496905490439 </span></span>
+<span id="cb9-118"><a href="#cb9-118" tabindex="-1"></a><span class="co">#&gt; Epoch 101, Loss: 1.05573887362125 </span></span>
+<span id="cb9-119"><a href="#cb9-119" tabindex="-1"></a><span class="co">#&gt; Epoch 102, Loss: 1.05289682555706 </span></span>
+<span id="cb9-120"><a href="#cb9-120" tabindex="-1"></a><span class="co">#&gt; Epoch 103, Loss: 1.05315527129681 </span></span>
+<span id="cb9-121"><a href="#cb9-121" tabindex="-1"></a><span class="co">#&gt; Epoch 104, Loss: 1.05350106288778 </span></span>
+<span id="cb9-122"><a href="#cb9-122" tabindex="-1"></a><span class="co">#&gt; Epoch 105, Loss: 1.05236184311674 </span></span>
+<span id="cb9-123"><a href="#cb9-123" tabindex="-1"></a><span class="co">#&gt; Epoch 106, Loss: 1.05209819496946 </span></span>
+<span id="cb9-124"><a href="#cb9-124" tabindex="-1"></a><span class="co">#&gt; Epoch 107, Loss: 1.05286318888056 </span></span>
+<span id="cb9-125"><a href="#cb9-125" tabindex="-1"></a><span class="co">#&gt; Epoch 108, Loss: 1.05290045636765 </span></span>
+<span id="cb9-126"><a href="#cb9-126" tabindex="-1"></a><span class="co">#&gt; Epoch 109, Loss: 1.0526789277792 </span></span>
+<span id="cb9-127"><a href="#cb9-127" tabindex="-1"></a><span class="co">#&gt; Epoch 110, Loss: 1.05272670217017 </span></span>
+<span id="cb9-128"><a href="#cb9-128" tabindex="-1"></a><span class="co">#&gt; Epoch 111, Loss: 1.05247747898102 </span></span>
+<span id="cb9-129"><a href="#cb9-129" tabindex="-1"></a><span class="co">#&gt; Epoch 112, Loss: 1.05293940483256 </span></span>
+<span id="cb9-130"><a href="#cb9-130" tabindex="-1"></a><span class="co">#&gt; Epoch 113, Loss: 1.0517768292351 </span></span>
+<span id="cb9-131"><a href="#cb9-131" tabindex="-1"></a><span class="co">#&gt; Epoch 114, Loss: 1.05161622578793 </span></span>
+<span id="cb9-132"><a href="#cb9-132" tabindex="-1"></a><span class="co">#&gt; Epoch 115, Loss: 1.05176465371822 </span></span>
+<span id="cb9-133"><a href="#cb9-133" tabindex="-1"></a><span class="co">#&gt; Epoch 116, Loss: 1.05162013052626 </span></span>
+<span id="cb9-134"><a href="#cb9-134" tabindex="-1"></a><span class="co">#&gt; Epoch 117, Loss: 1.05215622738321 </span></span>
+<span id="cb9-135"><a href="#cb9-135" tabindex="-1"></a><span class="co">#&gt; Epoch 118, Loss: 1.05070025204344 </span></span>
+<span id="cb9-136"><a href="#cb9-136" tabindex="-1"></a><span class="co">#&gt; Epoch 119, Loss: 1.05225899593627 </span></span>
+<span id="cb9-137"><a href="#cb9-137" tabindex="-1"></a><span class="co">#&gt; Epoch 120, Loss: 1.0512953670101 </span></span>
+<span id="cb9-138"><a href="#cb9-138" tabindex="-1"></a><span class="co">#&gt; Epoch 121, Loss: 1.05144101698348 </span></span>
+<span id="cb9-139"><a href="#cb9-139" tabindex="-1"></a><span class="co">#&gt; Epoch 122, Loss: 1.05054601678189 </span></span>
+<span id="cb9-140"><a href="#cb9-140" tabindex="-1"></a><span class="co">#&gt; Epoch 123, Loss: 1.05205151026553 </span></span>
+<span id="cb9-141"><a href="#cb9-141" tabindex="-1"></a><span class="co">#&gt; Epoch 124, Loss: 1.04985359152581 </span></span>
+<span id="cb9-142"><a href="#cb9-142" tabindex="-1"></a><span class="co">#&gt; Epoch 125, Loss: 1.05063394504659 </span></span>
+<span id="cb9-143"><a href="#cb9-143" tabindex="-1"></a><span class="co">#&gt; Epoch 126, Loss: 1.05264351564519 </span></span>
+<span id="cb9-144"><a href="#cb9-144" tabindex="-1"></a><span class="co">#&gt; Epoch 127, Loss: 1.05318929984214 </span></span>
+<span id="cb9-145"><a href="#cb9-145" tabindex="-1"></a><span class="co">#&gt; Epoch 128, Loss: 1.05353467356651 </span></span>
+<span id="cb9-146"><a href="#cb9-146" tabindex="-1"></a><span class="co">#&gt; Epoch 129, Loss: 1.05077263364132 </span></span>
+<span id="cb9-147"><a href="#cb9-147" tabindex="-1"></a><span class="co">#&gt; Epoch 130, Loss: 1.05101739979805 </span></span>
+<span id="cb9-148"><a href="#cb9-148" tabindex="-1"></a><span class="co">#&gt; Epoch 131, Loss: 1.05122837487687 </span></span>
+<span id="cb9-149"><a href="#cb9-149" tabindex="-1"></a><span class="co">#&gt; Epoch 132, Loss: 1.05199465123897 </span></span>
+<span id="cb9-150"><a href="#cb9-150" tabindex="-1"></a><span class="co">#&gt; Epoch 133, Loss: 1.05115857276511 </span></span>
+<span id="cb9-151"><a href="#cb9-151" tabindex="-1"></a><span class="co">#&gt; Epoch 134, Loss: 1.05029553428609 </span></span>
+<span id="cb9-152"><a href="#cb9-152" tabindex="-1"></a><span class="co">#&gt; Epoch 135, Loss: 1.05127300924443 </span></span>
+<span id="cb9-153"><a href="#cb9-153" tabindex="-1"></a><span class="co">#&gt; Epoch 136, Loss: 1.04945700029109 </span></span>
+<span id="cb9-154"><a href="#cb9-154" tabindex="-1"></a><span class="co">#&gt; Epoch 137, Loss: 1.05198102872422 </span></span>
+<span id="cb9-155"><a href="#cb9-155" tabindex="-1"></a><span class="co">#&gt; Epoch 138, Loss: 1.04901331948473 </span></span>
+<span id="cb9-156"><a href="#cb9-156" tabindex="-1"></a><span class="co">#&gt; Epoch 139, Loss: 1.04974957793317 </span></span>
+<span id="cb9-157"><a href="#cb9-157" tabindex="-1"></a><span class="co">#&gt; Epoch 140, Loss: 1.05055695708762 </span></span>
+<span id="cb9-158"><a href="#cb9-158" tabindex="-1"></a><span class="co">#&gt; Epoch 141, Loss: 1.04984554299649 </span></span>
+<span id="cb9-159"><a href="#cb9-159" tabindex="-1"></a><span class="co">#&gt; Epoch 142, Loss: 1.04936152950246 </span></span>
+<span id="cb9-160"><a href="#cb9-160" tabindex="-1"></a><span class="co">#&gt; Epoch 143, Loss: 1.04978456934716 </span></span>
+<span id="cb9-161"><a href="#cb9-161" tabindex="-1"></a><span class="co">#&gt; Epoch 144, Loss: 1.04998722894395 </span></span>
+<span id="cb9-162"><a href="#cb9-162" tabindex="-1"></a><span class="co">#&gt; Epoch 145, Loss: 1.05195550240101 </span></span>
+<span id="cb9-163"><a href="#cb9-163" tabindex="-1"></a><span class="co">#&gt; Epoch 146, Loss: 1.05126326483615 </span></span>
+<span id="cb9-164"><a href="#cb9-164" tabindex="-1"></a><span class="co">#&gt; Epoch 147, Loss: 1.04990933962325 </span></span>
+<span id="cb9-165"><a href="#cb9-165" tabindex="-1"></a><span class="co">#&gt; Epoch 148, Loss: 1.04994619558466 </span></span>
+<span id="cb9-166"><a href="#cb9-166" tabindex="-1"></a><span class="co">#&gt; Epoch 149, Loss: 1.05034838141279 </span></span>
+<span id="cb9-167"><a href="#cb9-167" tabindex="-1"></a><span class="co">#&gt; Epoch 150, Loss: 1.05048081437324 </span></span>
+<span id="cb9-168"><a href="#cb9-168" tabindex="-1"></a><span class="co">#&gt; Epoch 151, Loss: 1.04990863134252 </span></span>
+<span id="cb9-169"><a href="#cb9-169" tabindex="-1"></a><span class="co">#&gt; Epoch 152, Loss: 1.05070040803006 </span></span>
+<span id="cb9-170"><a href="#cb9-170" tabindex="-1"></a><span class="co">#&gt; Epoch 153, Loss: 1.05148356043278 </span></span>
+<span id="cb9-171"><a href="#cb9-171" tabindex="-1"></a><span class="co">#&gt; Epoch 154, Loss: 1.0502149339052 </span></span>
+<span id="cb9-172"><a href="#cb9-172" tabindex="-1"></a><span class="co">#&gt; Epoch 155, Loss: 1.05170773762338 </span></span>
+<span id="cb9-173"><a href="#cb9-173" tabindex="-1"></a><span class="co">#&gt; Epoch 156, Loss: 1.05046489422626 </span></span>
+<span id="cb9-174"><a href="#cb9-174" tabindex="-1"></a><span class="co">#&gt; Epoch 157, Loss: 1.0499082664226 </span></span>
+<span id="cb9-175"><a href="#cb9-175" tabindex="-1"></a><span class="co">#&gt; Epoch 158, Loss: 1.04975379622997 </span></span>
+<span id="cb9-176"><a href="#cb9-176" tabindex="-1"></a><span class="co">#&gt; Epoch 159, Loss: 1.05126466586235 </span></span>
+<span id="cb9-177"><a href="#cb9-177" tabindex="-1"></a><span class="co">#&gt; Epoch 160, Loss: 1.04987606723258 </span></span>
+<span id="cb9-178"><a href="#cb9-178" tabindex="-1"></a><span class="co">#&gt; Epoch 161, Loss: 1.05024355903585 </span></span>
+<span id="cb9-179"><a href="#cb9-179" tabindex="-1"></a><span class="co">#&gt; Epoch 162, Loss: 1.0498805876742 </span></span>
+<span id="cb9-180"><a href="#cb9-180" tabindex="-1"></a><span class="co">#&gt; Epoch 163, Loss: 1.050796797935 </span></span>
+<span id="cb9-181"><a href="#cb9-181" tabindex="-1"></a><span class="co">#&gt; Epoch 164, Loss: 1.05118714051044 </span></span>
+<span id="cb9-182"><a href="#cb9-182" tabindex="-1"></a><span class="co">#&gt; Epoch 165, Loss: 1.05231887102127 </span></span>
+<span id="cb9-183"><a href="#cb9-183" tabindex="-1"></a><span class="co">#&gt; Epoch 166, Loss: 1.05053942064021 </span></span>
+<span id="cb9-184"><a href="#cb9-184" tabindex="-1"></a><span class="co">#&gt; Epoch 167, Loss: 1.05016616145347 </span></span>
+<span id="cb9-185"><a href="#cb9-185" tabindex="-1"></a><span class="co">#&gt; Epoch 168, Loss: 1.05097076106579 </span></span>
+<span id="cb9-186"><a href="#cb9-186" tabindex="-1"></a><span class="co">#&gt; Epoch 169, Loss: 1.04905863486706 </span></span>
+<span id="cb9-187"><a href="#cb9-187" tabindex="-1"></a><span class="co">#&gt; Epoch 170, Loss: 1.04954165790943 </span></span>
+<span id="cb9-188"><a href="#cb9-188" tabindex="-1"></a><span class="co">#&gt; Epoch 171, Loss: 1.050983711126 </span></span>
+<span id="cb9-189"><a href="#cb9-189" tabindex="-1"></a><span class="co">#&gt; Epoch 172, Loss: 1.05045017314718 </span></span>
+<span id="cb9-190"><a href="#cb9-190" tabindex="-1"></a><span class="co">#&gt; Epoch 173, Loss: 1.0505311032559 </span></span>
+<span id="cb9-191"><a href="#cb9-191" tabindex="-1"></a><span class="co">#&gt; Epoch 174, Loss: 1.05129424530141 </span></span>
+<span id="cb9-192"><a href="#cb9-192" tabindex="-1"></a><span class="co">#&gt; Epoch 175, Loss: 1.0488808494299 </span></span>
+<span id="cb9-193"><a href="#cb9-193" tabindex="-1"></a><span class="co">#&gt; Epoch 176, Loss: 1.05068560768949 </span></span>
+<span id="cb9-194"><a href="#cb9-194" tabindex="-1"></a><span class="co">#&gt; Epoch 177, Loss: 1.04876472690004 </span></span>
+<span id="cb9-195"><a href="#cb9-195" tabindex="-1"></a><span class="co">#&gt; Epoch 178, Loss: 1.04826344549656 </span></span>
+<span id="cb9-196"><a href="#cb9-196" tabindex="-1"></a><span class="co">#&gt; Epoch 179, Loss: 1.04999127064614 </span></span>
+<span id="cb9-197"><a href="#cb9-197" tabindex="-1"></a><span class="co">#&gt; Epoch 180, Loss: 1.05156762263876 </span></span>
+<span id="cb9-198"><a href="#cb9-198" tabindex="-1"></a><span class="co">#&gt; Epoch 181, Loss: 1.04868469910419 </span></span>
+<span id="cb9-199"><a href="#cb9-199" tabindex="-1"></a><span class="co">#&gt; Epoch 182, Loss: 1.04926699970631 </span></span>
+<span id="cb9-200"><a href="#cb9-200" tabindex="-1"></a><span class="co">#&gt; Epoch 183, Loss: 1.05096643021766 </span></span>
+<span id="cb9-201"><a href="#cb9-201" tabindex="-1"></a><span class="co">#&gt; Epoch 184, Loss: 1.04950525088513 </span></span>
+<span id="cb9-202"><a href="#cb9-202" tabindex="-1"></a><span class="co">#&gt; Epoch 185, Loss: 1.05175396197654 </span></span>
+<span id="cb9-203"><a href="#cb9-203" tabindex="-1"></a><span class="co">#&gt; Epoch 186, Loss: 1.05392949726987 </span></span>
+<span id="cb9-204"><a href="#cb9-204" tabindex="-1"></a><span class="co">#&gt; Epoch 187, Loss: 1.0498287271946 </span></span>
+<span id="cb9-205"><a href="#cb9-205" tabindex="-1"></a><span class="co">#&gt; Epoch 188, Loss: 1.05103584553333 </span></span>
+<span id="cb9-206"><a href="#cb9-206" tabindex="-1"></a><span class="co">#&gt; Epoch 189, Loss: 1.04884529177179 </span></span>
+<span id="cb9-207"><a href="#cb9-207" tabindex="-1"></a><span class="co">#&gt; Epoch 190, Loss: 1.05053493570774 </span></span>
+<span id="cb9-208"><a href="#cb9-208" tabindex="-1"></a><span class="co">#&gt; Epoch 191, Loss: 1.05028000822727 </span></span>
+<span id="cb9-209"><a href="#cb9-209" tabindex="-1"></a><span class="co">#&gt; Epoch 192, Loss: 1.05065900372698 </span></span>
+<span id="cb9-210"><a href="#cb9-210" tabindex="-1"></a><span class="co">#&gt; Epoch 193, Loss: 1.04934979626473 </span></span>
+<span id="cb9-211"><a href="#cb9-211" tabindex="-1"></a><span class="co">#&gt; Epoch 194, Loss: 1.05122929145681 </span></span>
+<span id="cb9-212"><a href="#cb9-212" tabindex="-1"></a><span class="co">#&gt; Epoch 195, Loss: 1.0491789183084 </span></span>
+<span id="cb9-213"><a href="#cb9-213" tabindex="-1"></a><span class="co">#&gt; Epoch 196, Loss: 1.05024973921319 </span></span>
+<span id="cb9-214"><a href="#cb9-214" tabindex="-1"></a><span class="co">#&gt; Epoch 197, Loss: 1.04973343268354 </span></span>
+<span id="cb9-215"><a href="#cb9-215" tabindex="-1"></a><span class="co">#&gt; Epoch 198, Loss: 1.04931799750379 </span></span>
+<span id="cb9-216"><a href="#cb9-216" tabindex="-1"></a><span class="co">#&gt; Epoch 199, Loss: 1.04905477419813 </span></span>
+<span id="cb9-217"><a href="#cb9-217" tabindex="-1"></a><span class="co">#&gt; Epoch 200, Loss: 1.05068135261536</span></span></code></pre></div>
+</div>
+<div id="evaluating-the-model" class="section level3">
+<h3>Evaluating the Model</h3>
+<p>Finally, we’ll evaluate our model on the test data.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>fitted_scorch_model<span class="sc">$</span><span class="fu">eval</span>()</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(test_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>y_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(test_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>output <span class="ot">&lt;-</span> <span class="fu">fitted_scorch_model</span>(x_test)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">torch_argmax</span>(output, <span class="at">dim =</span> <span class="dv">2</span>)</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>accuracy <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred <span class="sc">==</span> y_test)<span class="sc">$</span><span class="fu">item</span>() <span class="sc">/</span> <span class="fu">length</span>(y_test)</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Test Accuracy: %.2f%%</span><span class="sc">\n</span><span class="st">&quot;</span>, accuracy <span class="sc">*</span> <span class="dv">100</span>))</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; Test Accuracy: 40.79%</span></span></code></pre></div>
+<ol start="6" style="list-style-type: decimal">
+<li>Compute how many times the model predicted 1 [loan approved] 2 [loan
+rejected] and 3 [application widthdrawn] by the model. How accurate is
+this? Is there a better metric for evaluating multi-class classification
+than raw accuracy? If so, compute that as well</li>
+</ol>
+</div>
+</div>
+<div id="task-2-changing-some-parameters" class="section level1">
+<h1>Task 2: Changing some parameters</h1>
+<p>Here our goal is to see how the model changes to modification in
+parameteres Read about the effect of batch size <a href="https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1faLinks" class="uri">https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1faLinks</a>
+to an external site.. (available offline here: How does Batch Size
+impact your model learning | by Devansh | Geek Culture | Medium.pdf )
+Now modify your batch size and see if you can replicate the claims in
+the article. How much does batch size affect runtime? Accuracy? Number
+of epochs needed for the model to converge? To Compute runtime, take a
+look at the tictoc package in R. Read about the effect of network depth
+vs width <a href="https://medium.com/@mysterious_obscure/deeper-or-wider-exploring-the-depths-and-breadths-of-neural-network-architectures-17127c135746Links" class="uri">https://medium.com/@mysterious_obscure/deeper-or-wider-exploring-the-depths-and-breadths-of-neural-network-architectures-17127c135746Links</a>
+to an external site. (available offline: Deeper or Wider: Exploring the
+Depths and Breadths of Neural Network Architectures | by Mysterious
+obscure | Medium.pdf). Can you replicate the claims in the article? Do
+you find that wider or longer networks perform better?</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>dl <span class="ot">&lt;-</span> <span class="fu">scorch_create_dataloader</span>(x_train, y_train, <span class="at">batch_size =</span> <span class="dv">50</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co"># Define the neural network</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#n_var = dim(df1)[2]</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>n_var <span class="ot">=</span> <span class="dv">2</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>n_classes <span class="ot">=</span> <span class="fu">length</span>(<span class="fu">unique</span>(df1<span class="sc">$</span>action_taken))</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>scorch_model <span class="ot">&lt;-</span> dl <span class="sc">|&gt;</span> </span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="fu">initiate_scorch</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, n_var, <span class="dv">16</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;relu&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, <span class="dv">16</span>, n_classes)</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>scorch_model</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt; This scorch model has a dataloader object with features: </span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt; This is a dataloader object with features:</span></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt;  * Batch size: 50</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt;  * Number of batches: 121</span></span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt;  * Dimension of input tensors: 2</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt;  * Dimension of output tensors: 1</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a><span class="co">#&gt;  and model architecture:</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a><span class="co">#&gt; * Layer 1 is a nn_linear layer</span></span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="co">#&gt; * Layer 2 is a nn_relu layer</span></span>
+<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a><span class="co">#&gt; * Layer 3 is a nn_linear layer</span></span>
+<span id="cb11-30"><a href="#cb11-30" tabindex="-1"></a><span class="co"># Compile the neural network</span></span>
+<span id="cb11-31"><a href="#cb11-31" tabindex="-1"></a></span>
+<span id="cb11-32"><a href="#cb11-32" tabindex="-1"></a>compiled_scorch_model <span class="ot">&lt;-</span> scorch_model <span class="sc">|&gt;</span></span>
+<span id="cb11-33"><a href="#cb11-33" tabindex="-1"></a>  <span class="fu">compile_scorch</span>()</span>
+<span id="cb11-34"><a href="#cb11-34" tabindex="-1"></a></span>
+<span id="cb11-35"><a href="#cb11-35" tabindex="-1"></a><span class="co"># Define weights for imbalanced classes</span></span>
+<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a></span>
+<span id="cb11-37"><a href="#cb11-37" tabindex="-1"></a>weight <span class="ot">&lt;-</span> <span class="fu">length</span>(train_data<span class="sc">$</span>action_taken) <span class="sc">/</span></span>
+<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a>  (n_classes <span class="sc">*</span> <span class="fu">torch_stack</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span>n_classes, <span class="cf">function</span>(i) <span class="fu">sum</span>(train_data<span class="sc">$</span>action_taken <span class="sc">==</span> i))))</span>
+<span id="cb11-39"><a href="#cb11-39" tabindex="-1"></a></span>
+<span id="cb11-40"><a href="#cb11-40" tabindex="-1"></a>weight <span class="ot">&lt;-</span> weight<span class="sc">$</span><span class="fu">squeeze</span>()</span>
+<span id="cb11-41"><a href="#cb11-41" tabindex="-1"></a></span>
+<span id="cb11-42"><a href="#cb11-42" tabindex="-1"></a><span class="co"># Fit the neural network</span></span>
+<span id="cb11-43"><a href="#cb11-43" tabindex="-1"></a></span>
+<span id="cb11-44"><a href="#cb11-44" tabindex="-1"></a>fitted_scorch_model <span class="ot">&lt;-</span> compiled_scorch_model <span class="sc">|&gt;</span> </span>
+<span id="cb11-45"><a href="#cb11-45" tabindex="-1"></a>  <span class="fu">fit_scorch</span>(</span>
+<span id="cb11-46"><a href="#cb11-46" tabindex="-1"></a>    <span class="at">loss =</span> nn_cross_entropy_loss,</span>
+<span id="cb11-47"><a href="#cb11-47" tabindex="-1"></a>    <span class="at">loss_params =</span> <span class="fu">list</span>(<span class="at">weight =</span> weight),</span>
+<span id="cb11-48"><a href="#cb11-48" tabindex="-1"></a>    <span class="at">num_epochs =</span> <span class="dv">200</span>, </span>
+<span id="cb11-49"><a href="#cb11-49" tabindex="-1"></a>    <span class="at">verbose =</span> T)</span>
+<span id="cb11-50"><a href="#cb11-50" tabindex="-1"></a><span class="co">#&gt; No GPU detected. Using available CPU.</span></span>
+<span id="cb11-51"><a href="#cb11-51" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb11-52"><a href="#cb11-52" tabindex="-1"></a><span class="co">#&gt; Epoch 1, Loss: 1.12699316257288 </span></span>
+<span id="cb11-53"><a href="#cb11-53" tabindex="-1"></a><span class="co">#&gt; Epoch 2, Loss: 1.10775097736642 </span></span>
+<span id="cb11-54"><a href="#cb11-54" tabindex="-1"></a><span class="co">#&gt; Epoch 3, Loss: 1.10310353523444 </span></span>
+<span id="cb11-55"><a href="#cb11-55" tabindex="-1"></a><span class="co">#&gt; Epoch 4, Loss: 1.09751294959675 </span></span>
+<span id="cb11-56"><a href="#cb11-56" tabindex="-1"></a><span class="co">#&gt; Epoch 5, Loss: 1.09637317677175 </span></span>
+<span id="cb11-57"><a href="#cb11-57" tabindex="-1"></a><span class="co">#&gt; Epoch 6, Loss: 1.09282819988314 </span></span>
+<span id="cb11-58"><a href="#cb11-58" tabindex="-1"></a><span class="co">#&gt; Epoch 7, Loss: 1.09275406746825 </span></span>
+<span id="cb11-59"><a href="#cb11-59" tabindex="-1"></a><span class="co">#&gt; Epoch 8, Loss: 1.09269280867143 </span></span>
+<span id="cb11-60"><a href="#cb11-60" tabindex="-1"></a><span class="co">#&gt; Epoch 9, Loss: 1.09035588493032 </span></span>
+<span id="cb11-61"><a href="#cb11-61" tabindex="-1"></a><span class="co">#&gt; Epoch 10, Loss: 1.08957757930125 </span></span>
+<span id="cb11-62"><a href="#cb11-62" tabindex="-1"></a><span class="co">#&gt; Epoch 11, Loss: 1.08970649380329 </span></span>
+<span id="cb11-63"><a href="#cb11-63" tabindex="-1"></a><span class="co">#&gt; Epoch 12, Loss: 1.08904272071586 </span></span>
+<span id="cb11-64"><a href="#cb11-64" tabindex="-1"></a><span class="co">#&gt; Epoch 13, Loss: 1.08676321939989 </span></span>
+<span id="cb11-65"><a href="#cb11-65" tabindex="-1"></a><span class="co">#&gt; Epoch 14, Loss: 1.085245548201 </span></span>
+<span id="cb11-66"><a href="#cb11-66" tabindex="-1"></a><span class="co">#&gt; Epoch 15, Loss: 1.08624773675745 </span></span>
+<span id="cb11-67"><a href="#cb11-67" tabindex="-1"></a><span class="co">#&gt; Epoch 16, Loss: 1.08586474046234 </span></span>
+<span id="cb11-68"><a href="#cb11-68" tabindex="-1"></a><span class="co">#&gt; Epoch 17, Loss: 1.08613320323061 </span></span>
+<span id="cb11-69"><a href="#cb11-69" tabindex="-1"></a><span class="co">#&gt; Epoch 18, Loss: 1.08419396562025 </span></span>
+<span id="cb11-70"><a href="#cb11-70" tabindex="-1"></a><span class="co">#&gt; Epoch 19, Loss: 1.08458621639851 </span></span>
+<span id="cb11-71"><a href="#cb11-71" tabindex="-1"></a><span class="co">#&gt; Epoch 20, Loss: 1.08217812914494 </span></span>
+<span id="cb11-72"><a href="#cb11-72" tabindex="-1"></a><span class="co">#&gt; Epoch 21, Loss: 1.08286246583481 </span></span>
+<span id="cb11-73"><a href="#cb11-73" tabindex="-1"></a><span class="co">#&gt; Epoch 22, Loss: 1.08128554860422 </span></span>
+<span id="cb11-74"><a href="#cb11-74" tabindex="-1"></a><span class="co">#&gt; Epoch 23, Loss: 1.08204982891556 </span></span>
+<span id="cb11-75"><a href="#cb11-75" tabindex="-1"></a><span class="co">#&gt; Epoch 24, Loss: 1.08160987767306 </span></span>
+<span id="cb11-76"><a href="#cb11-76" tabindex="-1"></a><span class="co">#&gt; Epoch 25, Loss: 1.0816963162304 </span></span>
+<span id="cb11-77"><a href="#cb11-77" tabindex="-1"></a><span class="co">#&gt; Epoch 26, Loss: 1.08158007781368 </span></span>
+<span id="cb11-78"><a href="#cb11-78" tabindex="-1"></a><span class="co">#&gt; Epoch 27, Loss: 1.08217529225941 </span></span>
+<span id="cb11-79"><a href="#cb11-79" tabindex="-1"></a><span class="co">#&gt; Epoch 28, Loss: 1.08096031709151 </span></span>
+<span id="cb11-80"><a href="#cb11-80" tabindex="-1"></a><span class="co">#&gt; Epoch 29, Loss: 1.08053492218995 </span></span>
+<span id="cb11-81"><a href="#cb11-81" tabindex="-1"></a><span class="co">#&gt; Epoch 30, Loss: 1.0776126281289 </span></span>
+<span id="cb11-82"><a href="#cb11-82" tabindex="-1"></a><span class="co">#&gt; Epoch 31, Loss: 1.0787949857633 </span></span>
+<span id="cb11-83"><a href="#cb11-83" tabindex="-1"></a><span class="co">#&gt; Epoch 32, Loss: 1.07811587704115 </span></span>
+<span id="cb11-84"><a href="#cb11-84" tabindex="-1"></a><span class="co">#&gt; Epoch 33, Loss: 1.07688377268058 </span></span>
+<span id="cb11-85"><a href="#cb11-85" tabindex="-1"></a><span class="co">#&gt; Epoch 34, Loss: 1.07647501141572 </span></span>
+<span id="cb11-86"><a href="#cb11-86" tabindex="-1"></a><span class="co">#&gt; Epoch 35, Loss: 1.07814633156642 </span></span>
+<span id="cb11-87"><a href="#cb11-87" tabindex="-1"></a><span class="co">#&gt; Epoch 36, Loss: 1.07549318646596 </span></span>
+<span id="cb11-88"><a href="#cb11-88" tabindex="-1"></a><span class="co">#&gt; Epoch 37, Loss: 1.07545518284002 </span></span>
+<span id="cb11-89"><a href="#cb11-89" tabindex="-1"></a><span class="co">#&gt; Epoch 38, Loss: 1.07505126235899 </span></span>
+<span id="cb11-90"><a href="#cb11-90" tabindex="-1"></a><span class="co">#&gt; Epoch 39, Loss: 1.07444139502265 </span></span>
+<span id="cb11-91"><a href="#cb11-91" tabindex="-1"></a><span class="co">#&gt; Epoch 40, Loss: 1.07504398911452 </span></span>
+<span id="cb11-92"><a href="#cb11-92" tabindex="-1"></a><span class="co">#&gt; Epoch 41, Loss: 1.07285284010832 </span></span>
+<span id="cb11-93"><a href="#cb11-93" tabindex="-1"></a><span class="co">#&gt; Epoch 42, Loss: 1.07536630295525 </span></span>
+<span id="cb11-94"><a href="#cb11-94" tabindex="-1"></a><span class="co">#&gt; Epoch 43, Loss: 1.07294894693312 </span></span>
+<span id="cb11-95"><a href="#cb11-95" tabindex="-1"></a><span class="co">#&gt; Epoch 44, Loss: 1.07379381321678 </span></span>
+<span id="cb11-96"><a href="#cb11-96" tabindex="-1"></a><span class="co">#&gt; Epoch 45, Loss: 1.07236207812286 </span></span>
+<span id="cb11-97"><a href="#cb11-97" tabindex="-1"></a><span class="co">#&gt; Epoch 46, Loss: 1.07155811885172 </span></span>
+<span id="cb11-98"><a href="#cb11-98" tabindex="-1"></a><span class="co">#&gt; Epoch 47, Loss: 1.07348920294076 </span></span>
+<span id="cb11-99"><a href="#cb11-99" tabindex="-1"></a><span class="co">#&gt; Epoch 48, Loss: 1.07154706982542 </span></span>
+<span id="cb11-100"><a href="#cb11-100" tabindex="-1"></a><span class="co">#&gt; Epoch 49, Loss: 1.07198954712261 </span></span>
+<span id="cb11-101"><a href="#cb11-101" tabindex="-1"></a><span class="co">#&gt; Epoch 50, Loss: 1.0700513213134 </span></span>
+<span id="cb11-102"><a href="#cb11-102" tabindex="-1"></a><span class="co">#&gt; Epoch 51, Loss: 1.0705312086531 </span></span>
+<span id="cb11-103"><a href="#cb11-103" tabindex="-1"></a><span class="co">#&gt; Epoch 52, Loss: 1.06915801763535 </span></span>
+<span id="cb11-104"><a href="#cb11-104" tabindex="-1"></a><span class="co">#&gt; Epoch 53, Loss: 1.06956119921582 </span></span>
+<span id="cb11-105"><a href="#cb11-105" tabindex="-1"></a><span class="co">#&gt; Epoch 54, Loss: 1.06897496684524 </span></span>
+<span id="cb11-106"><a href="#cb11-106" tabindex="-1"></a><span class="co">#&gt; Epoch 55, Loss: 1.06877242632149 </span></span>
+<span id="cb11-107"><a href="#cb11-107" tabindex="-1"></a><span class="co">#&gt; Epoch 56, Loss: 1.06944382634045 </span></span>
+<span id="cb11-108"><a href="#cb11-108" tabindex="-1"></a><span class="co">#&gt; Epoch 57, Loss: 1.06864830482105 </span></span>
+<span id="cb11-109"><a href="#cb11-109" tabindex="-1"></a><span class="co">#&gt; Epoch 58, Loss: 1.06761261402083 </span></span>
+<span id="cb11-110"><a href="#cb11-110" tabindex="-1"></a><span class="co">#&gt; Epoch 59, Loss: 1.06665177877284 </span></span>
+<span id="cb11-111"><a href="#cb11-111" tabindex="-1"></a><span class="co">#&gt; Epoch 60, Loss: 1.06757588228904 </span></span>
+<span id="cb11-112"><a href="#cb11-112" tabindex="-1"></a><span class="co">#&gt; Epoch 61, Loss: 1.06565307240841 </span></span>
+<span id="cb11-113"><a href="#cb11-113" tabindex="-1"></a><span class="co">#&gt; Epoch 62, Loss: 1.06793688496282 </span></span>
+<span id="cb11-114"><a href="#cb11-114" tabindex="-1"></a><span class="co">#&gt; Epoch 63, Loss: 1.0658834882019 </span></span>
+<span id="cb11-115"><a href="#cb11-115" tabindex="-1"></a><span class="co">#&gt; Epoch 64, Loss: 1.06729286071683 </span></span>
+<span id="cb11-116"><a href="#cb11-116" tabindex="-1"></a><span class="co">#&gt; Epoch 65, Loss: 1.06533125067545 </span></span>
+<span id="cb11-117"><a href="#cb11-117" tabindex="-1"></a><span class="co">#&gt; Epoch 66, Loss: 1.06486241186946 </span></span>
+<span id="cb11-118"><a href="#cb11-118" tabindex="-1"></a><span class="co">#&gt; Epoch 67, Loss: 1.06482968547127 </span></span>
+<span id="cb11-119"><a href="#cb11-119" tabindex="-1"></a><span class="co">#&gt; Epoch 68, Loss: 1.06591199202971 </span></span>
+<span id="cb11-120"><a href="#cb11-120" tabindex="-1"></a><span class="co">#&gt; Epoch 69, Loss: 1.06468233145958 </span></span>
+<span id="cb11-121"><a href="#cb11-121" tabindex="-1"></a><span class="co">#&gt; Epoch 70, Loss: 1.06438505945127 </span></span>
+<span id="cb11-122"><a href="#cb11-122" tabindex="-1"></a><span class="co">#&gt; Epoch 71, Loss: 1.06221236226972 </span></span>
+<span id="cb11-123"><a href="#cb11-123" tabindex="-1"></a><span class="co">#&gt; Epoch 72, Loss: 1.06371711797951 </span></span>
+<span id="cb11-124"><a href="#cb11-124" tabindex="-1"></a><span class="co">#&gt; Epoch 73, Loss: 1.06176361121422 </span></span>
+<span id="cb11-125"><a href="#cb11-125" tabindex="-1"></a><span class="co">#&gt; Epoch 74, Loss: 1.0618968404029 </span></span>
+<span id="cb11-126"><a href="#cb11-126" tabindex="-1"></a><span class="co">#&gt; Epoch 75, Loss: 1.06372409566375 </span></span>
+<span id="cb11-127"><a href="#cb11-127" tabindex="-1"></a><span class="co">#&gt; Epoch 76, Loss: 1.06386064497893 </span></span>
+<span id="cb11-128"><a href="#cb11-128" tabindex="-1"></a><span class="co">#&gt; Epoch 77, Loss: 1.06121516474022 </span></span>
+<span id="cb11-129"><a href="#cb11-129" tabindex="-1"></a><span class="co">#&gt; Epoch 78, Loss: 1.06284769852299 </span></span>
+<span id="cb11-130"><a href="#cb11-130" tabindex="-1"></a><span class="co">#&gt; Epoch 79, Loss: 1.05957317105995 </span></span>
+<span id="cb11-131"><a href="#cb11-131" tabindex="-1"></a><span class="co">#&gt; Epoch 80, Loss: 1.06036242029884 </span></span>
+<span id="cb11-132"><a href="#cb11-132" tabindex="-1"></a><span class="co">#&gt; Epoch 81, Loss: 1.06191891136248 </span></span>
+<span id="cb11-133"><a href="#cb11-133" tabindex="-1"></a><span class="co">#&gt; Epoch 82, Loss: 1.06211038758932 </span></span>
+<span id="cb11-134"><a href="#cb11-134" tabindex="-1"></a><span class="co">#&gt; Epoch 83, Loss: 1.06027808908589 </span></span>
+<span id="cb11-135"><a href="#cb11-135" tabindex="-1"></a><span class="co">#&gt; Epoch 84, Loss: 1.06172174461617 </span></span>
+<span id="cb11-136"><a href="#cb11-136" tabindex="-1"></a><span class="co">#&gt; Epoch 85, Loss: 1.05961135054423 </span></span>
+<span id="cb11-137"><a href="#cb11-137" tabindex="-1"></a><span class="co">#&gt; Epoch 86, Loss: 1.05803775541053 </span></span>
+<span id="cb11-138"><a href="#cb11-138" tabindex="-1"></a><span class="co">#&gt; Epoch 87, Loss: 1.05704815574914 </span></span>
+<span id="cb11-139"><a href="#cb11-139" tabindex="-1"></a><span class="co">#&gt; Epoch 88, Loss: 1.05628198877839 </span></span>
+<span id="cb11-140"><a href="#cb11-140" tabindex="-1"></a><span class="co">#&gt; Epoch 89, Loss: 1.05634499039532 </span></span>
+<span id="cb11-141"><a href="#cb11-141" tabindex="-1"></a><span class="co">#&gt; Epoch 90, Loss: 1.05775613479378 </span></span>
+<span id="cb11-142"><a href="#cb11-142" tabindex="-1"></a><span class="co">#&gt; Epoch 91, Loss: 1.05861087426666 </span></span>
+<span id="cb11-143"><a href="#cb11-143" tabindex="-1"></a><span class="co">#&gt; Epoch 92, Loss: 1.05693283012091 </span></span>
+<span id="cb11-144"><a href="#cb11-144" tabindex="-1"></a><span class="co">#&gt; Epoch 93, Loss: 1.05906429024767 </span></span>
+<span id="cb11-145"><a href="#cb11-145" tabindex="-1"></a><span class="co">#&gt; Epoch 94, Loss: 1.05634732138027 </span></span>
+<span id="cb11-146"><a href="#cb11-146" tabindex="-1"></a><span class="co">#&gt; Epoch 95, Loss: 1.05630829905675 </span></span>
+<span id="cb11-147"><a href="#cb11-147" tabindex="-1"></a><span class="co">#&gt; Epoch 96, Loss: 1.05697536468506 </span></span>
+<span id="cb11-148"><a href="#cb11-148" tabindex="-1"></a><span class="co">#&gt; Epoch 97, Loss: 1.05687669584574 </span></span>
+<span id="cb11-149"><a href="#cb11-149" tabindex="-1"></a><span class="co">#&gt; Epoch 98, Loss: 1.05651624981037 </span></span>
+<span id="cb11-150"><a href="#cb11-150" tabindex="-1"></a><span class="co">#&gt; Epoch 99, Loss: 1.05551977738861 </span></span>
+<span id="cb11-151"><a href="#cb11-151" tabindex="-1"></a><span class="co">#&gt; Epoch 100, Loss: 1.05402828149559 </span></span>
+<span id="cb11-152"><a href="#cb11-152" tabindex="-1"></a><span class="co">#&gt; Epoch 101, Loss: 1.0551934897407 </span></span>
+<span id="cb11-153"><a href="#cb11-153" tabindex="-1"></a><span class="co">#&gt; Epoch 102, Loss: 1.05503497882323 </span></span>
+<span id="cb11-154"><a href="#cb11-154" tabindex="-1"></a><span class="co">#&gt; Epoch 103, Loss: 1.05512196268917 </span></span>
+<span id="cb11-155"><a href="#cb11-155" tabindex="-1"></a><span class="co">#&gt; Epoch 104, Loss: 1.05793850136197 </span></span>
+<span id="cb11-156"><a href="#cb11-156" tabindex="-1"></a><span class="co">#&gt; Epoch 105, Loss: 1.05358238900003 </span></span>
+<span id="cb11-157"><a href="#cb11-157" tabindex="-1"></a><span class="co">#&gt; Epoch 106, Loss: 1.05505840049302 </span></span>
+<span id="cb11-158"><a href="#cb11-158" tabindex="-1"></a><span class="co">#&gt; Epoch 107, Loss: 1.05401573791977 </span></span>
+<span id="cb11-159"><a href="#cb11-159" tabindex="-1"></a><span class="co">#&gt; Epoch 108, Loss: 1.05427018275931 </span></span>
+<span id="cb11-160"><a href="#cb11-160" tabindex="-1"></a><span class="co">#&gt; Epoch 109, Loss: 1.05415178527517 </span></span>
+<span id="cb11-161"><a href="#cb11-161" tabindex="-1"></a><span class="co">#&gt; Epoch 110, Loss: 1.05373577933666 </span></span>
+<span id="cb11-162"><a href="#cb11-162" tabindex="-1"></a><span class="co">#&gt; Epoch 111, Loss: 1.051731717488 </span></span>
+<span id="cb11-163"><a href="#cb11-163" tabindex="-1"></a><span class="co">#&gt; Epoch 112, Loss: 1.05624574078016 </span></span>
+<span id="cb11-164"><a href="#cb11-164" tabindex="-1"></a><span class="co">#&gt; Epoch 113, Loss: 1.05352934185138 </span></span>
+<span id="cb11-165"><a href="#cb11-165" tabindex="-1"></a><span class="co">#&gt; Epoch 114, Loss: 1.05364559849432 </span></span>
+<span id="cb11-166"><a href="#cb11-166" tabindex="-1"></a><span class="co">#&gt; Epoch 115, Loss: 1.0508246520334 </span></span>
+<span id="cb11-167"><a href="#cb11-167" tabindex="-1"></a><span class="co">#&gt; Epoch 116, Loss: 1.05316024575352 </span></span>
+<span id="cb11-168"><a href="#cb11-168" tabindex="-1"></a><span class="co">#&gt; Epoch 117, Loss: 1.05251762837418 </span></span>
+<span id="cb11-169"><a href="#cb11-169" tabindex="-1"></a><span class="co">#&gt; Epoch 118, Loss: 1.05432121073904 </span></span>
+<span id="cb11-170"><a href="#cb11-170" tabindex="-1"></a><span class="co">#&gt; Epoch 119, Loss: 1.05186365557111 </span></span>
+<span id="cb11-171"><a href="#cb11-171" tabindex="-1"></a><span class="co">#&gt; Epoch 120, Loss: 1.05184927262551 </span></span>
+<span id="cb11-172"><a href="#cb11-172" tabindex="-1"></a><span class="co">#&gt; Epoch 121, Loss: 1.05474721301686 </span></span>
+<span id="cb11-173"><a href="#cb11-173" tabindex="-1"></a><span class="co">#&gt; Epoch 122, Loss: 1.05397889880109 </span></span>
+<span id="cb11-174"><a href="#cb11-174" tabindex="-1"></a><span class="co">#&gt; Epoch 123, Loss: 1.05146913932375 </span></span>
+<span id="cb11-175"><a href="#cb11-175" tabindex="-1"></a><span class="co">#&gt; Epoch 124, Loss: 1.05190778566786 </span></span>
+<span id="cb11-176"><a href="#cb11-176" tabindex="-1"></a><span class="co">#&gt; Epoch 125, Loss: 1.05125237102351 </span></span>
+<span id="cb11-177"><a href="#cb11-177" tabindex="-1"></a><span class="co">#&gt; Epoch 126, Loss: 1.05176171143193 </span></span>
+<span id="cb11-178"><a href="#cb11-178" tabindex="-1"></a><span class="co">#&gt; Epoch 127, Loss: 1.05249289688 </span></span>
+<span id="cb11-179"><a href="#cb11-179" tabindex="-1"></a><span class="co">#&gt; Epoch 128, Loss: 1.05157566169077 </span></span>
+<span id="cb11-180"><a href="#cb11-180" tabindex="-1"></a><span class="co">#&gt; Epoch 129, Loss: 1.05090269618783 </span></span>
+<span id="cb11-181"><a href="#cb11-181" tabindex="-1"></a><span class="co">#&gt; Epoch 130, Loss: 1.0518459406766 </span></span>
+<span id="cb11-182"><a href="#cb11-182" tabindex="-1"></a><span class="co">#&gt; Epoch 131, Loss: 1.05183339217478 </span></span>
+<span id="cb11-183"><a href="#cb11-183" tabindex="-1"></a><span class="co">#&gt; Epoch 132, Loss: 1.0510034265597 </span></span>
+<span id="cb11-184"><a href="#cb11-184" tabindex="-1"></a><span class="co">#&gt; Epoch 133, Loss: 1.05068605891929 </span></span>
+<span id="cb11-185"><a href="#cb11-185" tabindex="-1"></a><span class="co">#&gt; Epoch 134, Loss: 1.05087635635344 </span></span>
+<span id="cb11-186"><a href="#cb11-186" tabindex="-1"></a><span class="co">#&gt; Epoch 135, Loss: 1.04946569864415 </span></span>
+<span id="cb11-187"><a href="#cb11-187" tabindex="-1"></a><span class="co">#&gt; Epoch 136, Loss: 1.05121662695546 </span></span>
+<span id="cb11-188"><a href="#cb11-188" tabindex="-1"></a><span class="co">#&gt; Epoch 137, Loss: 1.05028353840852 </span></span>
+<span id="cb11-189"><a href="#cb11-189" tabindex="-1"></a><span class="co">#&gt; Epoch 138, Loss: 1.04900106024151 </span></span>
+<span id="cb11-190"><a href="#cb11-190" tabindex="-1"></a><span class="co">#&gt; Epoch 139, Loss: 1.04981668182641 </span></span>
+<span id="cb11-191"><a href="#cb11-191" tabindex="-1"></a><span class="co">#&gt; Epoch 140, Loss: 1.05040919928511 </span></span>
+<span id="cb11-192"><a href="#cb11-192" tabindex="-1"></a><span class="co">#&gt; Epoch 141, Loss: 1.05073088062696 </span></span>
+<span id="cb11-193"><a href="#cb11-193" tabindex="-1"></a><span class="co">#&gt; Epoch 142, Loss: 1.0504375400622 </span></span>
+<span id="cb11-194"><a href="#cb11-194" tabindex="-1"></a><span class="co">#&gt; Epoch 143, Loss: 1.04917775944245 </span></span>
+<span id="cb11-195"><a href="#cb11-195" tabindex="-1"></a><span class="co">#&gt; Epoch 144, Loss: 1.0491922054409 </span></span>
+<span id="cb11-196"><a href="#cb11-196" tabindex="-1"></a><span class="co">#&gt; Epoch 145, Loss: 1.05054234128353 </span></span>
+<span id="cb11-197"><a href="#cb11-197" tabindex="-1"></a><span class="co">#&gt; Epoch 146, Loss: 1.04991258865546 </span></span>
+<span id="cb11-198"><a href="#cb11-198" tabindex="-1"></a><span class="co">#&gt; Epoch 147, Loss: 1.04937017702859 </span></span>
+<span id="cb11-199"><a href="#cb11-199" tabindex="-1"></a><span class="co">#&gt; Epoch 148, Loss: 1.04912984026365 </span></span>
+<span id="cb11-200"><a href="#cb11-200" tabindex="-1"></a><span class="co">#&gt; Epoch 149, Loss: 1.04984444773887 </span></span>
+<span id="cb11-201"><a href="#cb11-201" tabindex="-1"></a><span class="co">#&gt; Epoch 150, Loss: 1.04943692536393 </span></span>
+<span id="cb11-202"><a href="#cb11-202" tabindex="-1"></a><span class="co">#&gt; Epoch 151, Loss: 1.04979486357082 </span></span>
+<span id="cb11-203"><a href="#cb11-203" tabindex="-1"></a><span class="co">#&gt; Epoch 152, Loss: 1.04953718431725 </span></span>
+<span id="cb11-204"><a href="#cb11-204" tabindex="-1"></a><span class="co">#&gt; Epoch 153, Loss: 1.0494569820806 </span></span>
+<span id="cb11-205"><a href="#cb11-205" tabindex="-1"></a><span class="co">#&gt; Epoch 154, Loss: 1.05086820726552 </span></span>
+<span id="cb11-206"><a href="#cb11-206" tabindex="-1"></a><span class="co">#&gt; Epoch 155, Loss: 1.05195279702667 </span></span>
+<span id="cb11-207"><a href="#cb11-207" tabindex="-1"></a><span class="co">#&gt; Epoch 156, Loss: 1.04929032700121 </span></span>
+<span id="cb11-208"><a href="#cb11-208" tabindex="-1"></a><span class="co">#&gt; Epoch 157, Loss: 1.04977602604007 </span></span>
+<span id="cb11-209"><a href="#cb11-209" tabindex="-1"></a><span class="co">#&gt; Epoch 158, Loss: 1.04965645074844 </span></span>
+<span id="cb11-210"><a href="#cb11-210" tabindex="-1"></a><span class="co">#&gt; Epoch 159, Loss: 1.04920201409947 </span></span>
+<span id="cb11-211"><a href="#cb11-211" tabindex="-1"></a><span class="co">#&gt; Epoch 160, Loss: 1.04809075347648 </span></span>
+<span id="cb11-212"><a href="#cb11-212" tabindex="-1"></a><span class="co">#&gt; Epoch 161, Loss: 1.05061720422477 </span></span>
+<span id="cb11-213"><a href="#cb11-213" tabindex="-1"></a><span class="co">#&gt; Epoch 162, Loss: 1.04884685218827 </span></span>
+<span id="cb11-214"><a href="#cb11-214" tabindex="-1"></a><span class="co">#&gt; Epoch 163, Loss: 1.04831494280129 </span></span>
+<span id="cb11-215"><a href="#cb11-215" tabindex="-1"></a><span class="co">#&gt; Epoch 164, Loss: 1.05097045533913 </span></span>
+<span id="cb11-216"><a href="#cb11-216" tabindex="-1"></a><span class="co">#&gt; Epoch 165, Loss: 1.04900767734228 </span></span>
+<span id="cb11-217"><a href="#cb11-217" tabindex="-1"></a><span class="co">#&gt; Epoch 166, Loss: 1.0489394186942 </span></span>
+<span id="cb11-218"><a href="#cb11-218" tabindex="-1"></a><span class="co">#&gt; Epoch 167, Loss: 1.05060911375629 </span></span>
+<span id="cb11-219"><a href="#cb11-219" tabindex="-1"></a><span class="co">#&gt; Epoch 168, Loss: 1.04795573713366 </span></span>
+<span id="cb11-220"><a href="#cb11-220" tabindex="-1"></a><span class="co">#&gt; Epoch 169, Loss: 1.05208012732593 </span></span>
+<span id="cb11-221"><a href="#cb11-221" tabindex="-1"></a><span class="co">#&gt; Epoch 170, Loss: 1.04931168467545 </span></span>
+<span id="cb11-222"><a href="#cb11-222" tabindex="-1"></a><span class="co">#&gt; Epoch 171, Loss: 1.05077522697528 </span></span>
+<span id="cb11-223"><a href="#cb11-223" tabindex="-1"></a><span class="co">#&gt; Epoch 172, Loss: 1.04922904258917 </span></span>
+<span id="cb11-224"><a href="#cb11-224" tabindex="-1"></a><span class="co">#&gt; Epoch 173, Loss: 1.04968323096756 </span></span>
+<span id="cb11-225"><a href="#cb11-225" tabindex="-1"></a><span class="co">#&gt; Epoch 174, Loss: 1.05055870349742 </span></span>
+<span id="cb11-226"><a href="#cb11-226" tabindex="-1"></a><span class="co">#&gt; Epoch 175, Loss: 1.04706872839573 </span></span>
+<span id="cb11-227"><a href="#cb11-227" tabindex="-1"></a><span class="co">#&gt; Epoch 176, Loss: 1.05279483627682 </span></span>
+<span id="cb11-228"><a href="#cb11-228" tabindex="-1"></a><span class="co">#&gt; Epoch 177, Loss: 1.04896557331085 </span></span>
+<span id="cb11-229"><a href="#cb11-229" tabindex="-1"></a><span class="co">#&gt; Epoch 178, Loss: 1.04975264722651 </span></span>
+<span id="cb11-230"><a href="#cb11-230" tabindex="-1"></a><span class="co">#&gt; Epoch 179, Loss: 1.04880219599432 </span></span>
+<span id="cb11-231"><a href="#cb11-231" tabindex="-1"></a><span class="co">#&gt; Epoch 180, Loss: 1.05163478013898 </span></span>
+<span id="cb11-232"><a href="#cb11-232" tabindex="-1"></a><span class="co">#&gt; Epoch 181, Loss: 1.0486446880112 </span></span>
+<span id="cb11-233"><a href="#cb11-233" tabindex="-1"></a><span class="co">#&gt; Epoch 182, Loss: 1.05101411697293 </span></span>
+<span id="cb11-234"><a href="#cb11-234" tabindex="-1"></a><span class="co">#&gt; Epoch 183, Loss: 1.04803439063474 </span></span>
+<span id="cb11-235"><a href="#cb11-235" tabindex="-1"></a><span class="co">#&gt; Epoch 184, Loss: 1.04934855039455 </span></span>
+<span id="cb11-236"><a href="#cb11-236" tabindex="-1"></a><span class="co">#&gt; Epoch 185, Loss: 1.04839902131025 </span></span>
+<span id="cb11-237"><a href="#cb11-237" tabindex="-1"></a><span class="co">#&gt; Epoch 186, Loss: 1.05083701876569 </span></span>
+<span id="cb11-238"><a href="#cb11-238" tabindex="-1"></a><span class="co">#&gt; Epoch 187, Loss: 1.04847664281356 </span></span>
+<span id="cb11-239"><a href="#cb11-239" tabindex="-1"></a><span class="co">#&gt; Epoch 188, Loss: 1.04745020107789 </span></span>
+<span id="cb11-240"><a href="#cb11-240" tabindex="-1"></a><span class="co">#&gt; Epoch 189, Loss: 1.04888885277362 </span></span>
+<span id="cb11-241"><a href="#cb11-241" tabindex="-1"></a><span class="co">#&gt; Epoch 190, Loss: 1.04977512458139 </span></span>
+<span id="cb11-242"><a href="#cb11-242" tabindex="-1"></a><span class="co">#&gt; Epoch 191, Loss: 1.04902325238078 </span></span>
+<span id="cb11-243"><a href="#cb11-243" tabindex="-1"></a><span class="co">#&gt; Epoch 192, Loss: 1.04894701409931 </span></span>
+<span id="cb11-244"><a href="#cb11-244" tabindex="-1"></a><span class="co">#&gt; Epoch 193, Loss: 1.04918094164084 </span></span>
+<span id="cb11-245"><a href="#cb11-245" tabindex="-1"></a><span class="co">#&gt; Epoch 194, Loss: 1.0491536008425 </span></span>
+<span id="cb11-246"><a href="#cb11-246" tabindex="-1"></a><span class="co">#&gt; Epoch 195, Loss: 1.04882973432541 </span></span>
+<span id="cb11-247"><a href="#cb11-247" tabindex="-1"></a><span class="co">#&gt; Epoch 196, Loss: 1.04753743518483 </span></span>
+<span id="cb11-248"><a href="#cb11-248" tabindex="-1"></a><span class="co">#&gt; Epoch 197, Loss: 1.04823404205732 </span></span>
+<span id="cb11-249"><a href="#cb11-249" tabindex="-1"></a><span class="co">#&gt; Epoch 198, Loss: 1.04725265158109 </span></span>
+<span id="cb11-250"><a href="#cb11-250" tabindex="-1"></a><span class="co">#&gt; Epoch 199, Loss: 1.04722859396422 </span></span>
+<span id="cb11-251"><a href="#cb11-251" tabindex="-1"></a><span class="co">#&gt; Epoch 200, Loss: 1.04737196924273</span></span>
+<span id="cb11-252"><a href="#cb11-252" tabindex="-1"></a></span>
+<span id="cb11-253"><a href="#cb11-253" tabindex="-1"></a></span>
+<span id="cb11-254"><a href="#cb11-254" tabindex="-1"></a>fitted_scorch_model<span class="sc">$</span><span class="fu">eval</span>()</span>
+<span id="cb11-255"><a href="#cb11-255" tabindex="-1"></a></span>
+<span id="cb11-256"><a href="#cb11-256" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(test_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb11-257"><a href="#cb11-257" tabindex="-1"></a>y_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(test_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb11-258"><a href="#cb11-258" tabindex="-1"></a></span>
+<span id="cb11-259"><a href="#cb11-259" tabindex="-1"></a>output <span class="ot">&lt;-</span> <span class="fu">fitted_scorch_model</span>(x_test)</span>
+<span id="cb11-260"><a href="#cb11-260" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">torch_argmax</span>(output, <span class="at">dim =</span> <span class="dv">2</span>)</span>
+<span id="cb11-261"><a href="#cb11-261" tabindex="-1"></a></span>
+<span id="cb11-262"><a href="#cb11-262" tabindex="-1"></a>accuracy <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred <span class="sc">==</span> y_test)<span class="sc">$</span><span class="fu">item</span>() <span class="sc">/</span> <span class="fu">length</span>(y_test)</span>
+<span id="cb11-263"><a href="#cb11-263" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Test Accuracy: %.2f%%</span><span class="sc">\n</span><span class="st">&quot;</span>, accuracy <span class="sc">*</span> <span class="dv">100</span>))</span>
+<span id="cb11-264"><a href="#cb11-264" tabindex="-1"></a><span class="co">#&gt; Test Accuracy: 35.80%</span></span></code></pre></div>
+<blockquote>
+<p>Above we can see that increasing the batch size increases the
+accuracy and the computing speed due to fewer updates.</p>
+</blockquote>
+</div>
+<div id="task-3-the-role-of-preprocessing-and-human-intervention" class="section level1">
+<h1>Task 3: The Role of preprocessing and human intervention</h1>
+<p>A common myth with neural networks is that since the network is
+flexible enough to find the best preprocessing of your data to achieve
+maximum accuracy, there is no need for human-preprocessing. While this
+is debatable in ideal theoretical situations (such as networks with
+infinite numbers of nodes or layers and unlimited compute time), in many
+practical situations, common preprocessing can still immensely help the
+fitting of the network. To demonstrate:</p>
+<ol style="list-style-type: decimal">
+<li>Do the same procedure as Task 1, but do not log transform income or
+loan_amount. How normal are the variables? What happens to the model’s
+performance?</li>
+</ol>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span> <span class="fu">select</span>(action_taken, income, loan_amount)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2 <span class="sc">%&gt;%</span> <span class="fu">filter</span>(action_taken <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>), income<span class="sc">&gt;</span><span class="dv">0</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2 <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">action_taken =</span> <span class="fu">case_when</span>(</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">1</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">3</span> <span class="sc">~</span> <span class="dv">2</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">4</span> <span class="sc">~</span> <span class="dv">3</span>))</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2[<span class="fu">complete.cases</span>(df2), ]</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>train_indices <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(df2), <span class="fl">0.8</span> <span class="sc">*</span> <span class="fu">nrow</span>(df2))</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> df2[train_indices, ]</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> df2[<span class="sc">-</span>train_indices, ]</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co"># Create the dataloader</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>x_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(train_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>y_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(train_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a></span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>dl <span class="ot">&lt;-</span> <span class="fu">scorch_create_dataloader</span>(x_train, y_train, <span class="at">batch_size =</span> <span class="dv">50</span>)</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co"># Define the neural network</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a></span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#n_var = dim(df1)[2]</span></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a>n_var <span class="ot">=</span> <span class="dv">2</span></span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a>n_classes <span class="ot">=</span> <span class="fu">length</span>(<span class="fu">unique</span>(df2<span class="sc">$</span>action_taken))</span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a></span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a>scorch_model <span class="ot">&lt;-</span> dl <span class="sc">|&gt;</span> </span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a>  <span class="fu">initiate_scorch</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, n_var, <span class="dv">16</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;relu&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, <span class="dv">16</span>, n_classes)</span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a></span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a>scorch_model</span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a><span class="co">#&gt; This scorch model has a dataloader object with features: </span></span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a><span class="co">#&gt; This is a dataloader object with features:</span></span>
+<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a><span class="co">#&gt;  * Batch size: 50</span></span>
+<span id="cb12-42"><a href="#cb12-42" tabindex="-1"></a><span class="co">#&gt;  * Number of batches: 121</span></span>
+<span id="cb12-43"><a href="#cb12-43" tabindex="-1"></a><span class="co">#&gt;  * Dimension of input tensors: 2</span></span>
+<span id="cb12-44"><a href="#cb12-44" tabindex="-1"></a><span class="co">#&gt;  * Dimension of output tensors: 1</span></span>
+<span id="cb12-45"><a href="#cb12-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-46"><a href="#cb12-46" tabindex="-1"></a><span class="co">#&gt;  and model architecture:</span></span>
+<span id="cb12-47"><a href="#cb12-47" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-48"><a href="#cb12-48" tabindex="-1"></a><span class="co">#&gt; * Layer 1 is a nn_linear layer</span></span>
+<span id="cb12-49"><a href="#cb12-49" tabindex="-1"></a><span class="co">#&gt; * Layer 2 is a nn_relu layer</span></span>
+<span id="cb12-50"><a href="#cb12-50" tabindex="-1"></a><span class="co">#&gt; * Layer 3 is a nn_linear layer</span></span>
+<span id="cb12-51"><a href="#cb12-51" tabindex="-1"></a><span class="co"># Compile the neural network</span></span>
+<span id="cb12-52"><a href="#cb12-52" tabindex="-1"></a></span>
+<span id="cb12-53"><a href="#cb12-53" tabindex="-1"></a>compiled_scorch_model <span class="ot">&lt;-</span> scorch_model <span class="sc">|&gt;</span></span>
+<span id="cb12-54"><a href="#cb12-54" tabindex="-1"></a>  <span class="fu">compile_scorch</span>()</span>
+<span id="cb12-55"><a href="#cb12-55" tabindex="-1"></a></span>
+<span id="cb12-56"><a href="#cb12-56" tabindex="-1"></a><span class="co"># Define weights for imbalanced classes</span></span>
+<span id="cb12-57"><a href="#cb12-57" tabindex="-1"></a></span>
+<span id="cb12-58"><a href="#cb12-58" tabindex="-1"></a>weight <span class="ot">&lt;-</span> <span class="fu">length</span>(train_data<span class="sc">$</span>action_taken) <span class="sc">/</span></span>
+<span id="cb12-59"><a href="#cb12-59" tabindex="-1"></a>  (n_classes <span class="sc">*</span> <span class="fu">torch_stack</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span>n_classes, <span class="cf">function</span>(i) <span class="fu">sum</span>(train_data<span class="sc">$</span>action_taken <span class="sc">==</span> i))))</span>
+<span id="cb12-60"><a href="#cb12-60" tabindex="-1"></a></span>
+<span id="cb12-61"><a href="#cb12-61" tabindex="-1"></a>weight <span class="ot">&lt;-</span> weight<span class="sc">$</span><span class="fu">squeeze</span>()</span>
+<span id="cb12-62"><a href="#cb12-62" tabindex="-1"></a></span>
+<span id="cb12-63"><a href="#cb12-63" tabindex="-1"></a><span class="co"># Fit the neural network</span></span>
+<span id="cb12-64"><a href="#cb12-64" tabindex="-1"></a></span>
+<span id="cb12-65"><a href="#cb12-65" tabindex="-1"></a>fitted_scorch_model <span class="ot">&lt;-</span> compiled_scorch_model <span class="sc">|&gt;</span> </span>
+<span id="cb12-66"><a href="#cb12-66" tabindex="-1"></a>  <span class="fu">fit_scorch</span>(</span>
+<span id="cb12-67"><a href="#cb12-67" tabindex="-1"></a>    <span class="at">loss =</span> nn_cross_entropy_loss,</span>
+<span id="cb12-68"><a href="#cb12-68" tabindex="-1"></a>    <span class="at">loss_params =</span> <span class="fu">list</span>(<span class="at">weight =</span> weight),</span>
+<span id="cb12-69"><a href="#cb12-69" tabindex="-1"></a>    <span class="at">num_epochs =</span> <span class="dv">200</span>, </span>
+<span id="cb12-70"><a href="#cb12-70" tabindex="-1"></a>    <span class="at">verbose =</span> T)</span>
+<span id="cb12-71"><a href="#cb12-71" tabindex="-1"></a><span class="co">#&gt; No GPU detected. Using available CPU.</span></span>
+<span id="cb12-72"><a href="#cb12-72" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-73"><a href="#cb12-73" tabindex="-1"></a><span class="co">#&gt; Epoch 1, Loss: 1805.40746487074 </span></span>
+<span id="cb12-74"><a href="#cb12-74" tabindex="-1"></a><span class="co">#&gt; Epoch 2, Loss: 1067.215074019 </span></span>
+<span id="cb12-75"><a href="#cb12-75" tabindex="-1"></a><span class="co">#&gt; Epoch 3, Loss: 197.061650575685 </span></span>
+<span id="cb12-76"><a href="#cb12-76" tabindex="-1"></a><span class="co">#&gt; Epoch 4, Loss: 217.966750763665 </span></span>
+<span id="cb12-77"><a href="#cb12-77" tabindex="-1"></a><span class="co">#&gt; Epoch 5, Loss: 172.787811665496 </span></span>
+<span id="cb12-78"><a href="#cb12-78" tabindex="-1"></a><span class="co">#&gt; Epoch 6, Loss: 260.754091562318 </span></span>
+<span id="cb12-79"><a href="#cb12-79" tabindex="-1"></a><span class="co">#&gt; Epoch 7, Loss: 359.375053626447 </span></span>
+<span id="cb12-80"><a href="#cb12-80" tabindex="-1"></a><span class="co">#&gt; Epoch 8, Loss: 280.83726364719 </span></span>
+<span id="cb12-81"><a href="#cb12-81" tabindex="-1"></a><span class="co">#&gt; Epoch 9, Loss: 203.42900290371 </span></span>
+<span id="cb12-82"><a href="#cb12-82" tabindex="-1"></a><span class="co">#&gt; Epoch 10, Loss: 215.887086143178 </span></span>
+<span id="cb12-83"><a href="#cb12-83" tabindex="-1"></a><span class="co">#&gt; Epoch 11, Loss: 202.233844284184 </span></span>
+<span id="cb12-84"><a href="#cb12-84" tabindex="-1"></a><span class="co">#&gt; Epoch 12, Loss: 281.441406269704 </span></span>
+<span id="cb12-85"><a href="#cb12-85" tabindex="-1"></a><span class="co">#&gt; Epoch 13, Loss: 218.933356324503 </span></span>
+<span id="cb12-86"><a href="#cb12-86" tabindex="-1"></a><span class="co">#&gt; Epoch 14, Loss: 197.339731121851 </span></span>
+<span id="cb12-87"><a href="#cb12-87" tabindex="-1"></a><span class="co">#&gt; Epoch 15, Loss: 291.718068524826 </span></span>
+<span id="cb12-88"><a href="#cb12-88" tabindex="-1"></a><span class="co">#&gt; Epoch 16, Loss: 269.581587365836 </span></span>
+<span id="cb12-89"><a href="#cb12-89" tabindex="-1"></a><span class="co">#&gt; Epoch 17, Loss: 250.017932592345 </span></span>
+<span id="cb12-90"><a href="#cb12-90" tabindex="-1"></a><span class="co">#&gt; Epoch 18, Loss: 174.738995701814 </span></span>
+<span id="cb12-91"><a href="#cb12-91" tabindex="-1"></a><span class="co">#&gt; Epoch 19, Loss: 268.380687808202 </span></span>
+<span id="cb12-92"><a href="#cb12-92" tabindex="-1"></a><span class="co">#&gt; Epoch 20, Loss: 286.185061446891 </span></span>
+<span id="cb12-93"><a href="#cb12-93" tabindex="-1"></a><span class="co">#&gt; Epoch 21, Loss: 275.092451615767 </span></span>
+<span id="cb12-94"><a href="#cb12-94" tabindex="-1"></a><span class="co">#&gt; Epoch 22, Loss: 241.097414481738 </span></span>
+<span id="cb12-95"><a href="#cb12-95" tabindex="-1"></a><span class="co">#&gt; Epoch 23, Loss: 267.184362411499 </span></span>
+<span id="cb12-96"><a href="#cb12-96" tabindex="-1"></a><span class="co">#&gt; Epoch 24, Loss: 272.151275398317 </span></span>
+<span id="cb12-97"><a href="#cb12-97" tabindex="-1"></a><span class="co">#&gt; Epoch 25, Loss: 197.330456741585 </span></span>
+<span id="cb12-98"><a href="#cb12-98" tabindex="-1"></a><span class="co">#&gt; Epoch 26, Loss: 306.717746734619 </span></span>
+<span id="cb12-99"><a href="#cb12-99" tabindex="-1"></a><span class="co">#&gt; Epoch 27, Loss: 159.154344637532 </span></span>
+<span id="cb12-100"><a href="#cb12-100" tabindex="-1"></a><span class="co">#&gt; Epoch 28, Loss: 163.683912450617 </span></span>
+<span id="cb12-101"><a href="#cb12-101" tabindex="-1"></a><span class="co">#&gt; Epoch 29, Loss: 258.603380668262 </span></span>
+<span id="cb12-102"><a href="#cb12-102" tabindex="-1"></a><span class="co">#&gt; Epoch 30, Loss: 153.891389168984 </span></span>
+<span id="cb12-103"><a href="#cb12-103" tabindex="-1"></a><span class="co">#&gt; Epoch 31, Loss: 219.68311975022 </span></span>
+<span id="cb12-104"><a href="#cb12-104" tabindex="-1"></a><span class="co">#&gt; Epoch 32, Loss: 177.777302970571 </span></span>
+<span id="cb12-105"><a href="#cb12-105" tabindex="-1"></a><span class="co">#&gt; Epoch 33, Loss: 164.998646460289 </span></span>
+<span id="cb12-106"><a href="#cb12-106" tabindex="-1"></a><span class="co">#&gt; Epoch 34, Loss: 279.149200281821 </span></span>
+<span id="cb12-107"><a href="#cb12-107" tabindex="-1"></a><span class="co">#&gt; Epoch 35, Loss: 329.332886144149 </span></span>
+<span id="cb12-108"><a href="#cb12-108" tabindex="-1"></a><span class="co">#&gt; Epoch 36, Loss: 173.239757766408 </span></span>
+<span id="cb12-109"><a href="#cb12-109" tabindex="-1"></a><span class="co">#&gt; Epoch 37, Loss: 330.190774097916 </span></span>
+<span id="cb12-110"><a href="#cb12-110" tabindex="-1"></a><span class="co">#&gt; Epoch 38, Loss: 227.783492474517 </span></span>
+<span id="cb12-111"><a href="#cb12-111" tabindex="-1"></a><span class="co">#&gt; Epoch 39, Loss: 183.347115571834 </span></span>
+<span id="cb12-112"><a href="#cb12-112" tabindex="-1"></a><span class="co">#&gt; Epoch 40, Loss: 278.747318256 </span></span>
+<span id="cb12-113"><a href="#cb12-113" tabindex="-1"></a><span class="co">#&gt; Epoch 41, Loss: 236.966795393258 </span></span>
+<span id="cb12-114"><a href="#cb12-114" tabindex="-1"></a><span class="co">#&gt; Epoch 42, Loss: 185.678250494082 </span></span>
+<span id="cb12-115"><a href="#cb12-115" tabindex="-1"></a><span class="co">#&gt; Epoch 43, Loss: 230.902184600672 </span></span>
+<span id="cb12-116"><a href="#cb12-116" tabindex="-1"></a><span class="co">#&gt; Epoch 44, Loss: 256.257112400591 </span></span>
+<span id="cb12-117"><a href="#cb12-117" tabindex="-1"></a><span class="co">#&gt; Epoch 45, Loss: 206.215957550963 </span></span>
+<span id="cb12-118"><a href="#cb12-118" tabindex="-1"></a><span class="co">#&gt; Epoch 46, Loss: 209.088123116611 </span></span>
+<span id="cb12-119"><a href="#cb12-119" tabindex="-1"></a><span class="co">#&gt; Epoch 47, Loss: 257.850993172196 </span></span>
+<span id="cb12-120"><a href="#cb12-120" tabindex="-1"></a><span class="co">#&gt; Epoch 48, Loss: 326.760504178764 </span></span>
+<span id="cb12-121"><a href="#cb12-121" tabindex="-1"></a><span class="co">#&gt; Epoch 49, Loss: 165.568186752067 </span></span>
+<span id="cb12-122"><a href="#cb12-122" tabindex="-1"></a><span class="co">#&gt; Epoch 50, Loss: 207.715551336935 </span></span>
+<span id="cb12-123"><a href="#cb12-123" tabindex="-1"></a><span class="co">#&gt; Epoch 51, Loss: 170.734621158316 </span></span>
+<span id="cb12-124"><a href="#cb12-124" tabindex="-1"></a><span class="co">#&gt; Epoch 52, Loss: 165.954521455055 </span></span>
+<span id="cb12-125"><a href="#cb12-125" tabindex="-1"></a><span class="co">#&gt; Epoch 53, Loss: 131.599131186146 </span></span>
+<span id="cb12-126"><a href="#cb12-126" tabindex="-1"></a><span class="co">#&gt; Epoch 54, Loss: 174.854964082891 </span></span>
+<span id="cb12-127"><a href="#cb12-127" tabindex="-1"></a><span class="co">#&gt; Epoch 55, Loss: 260.97001244411 </span></span>
+<span id="cb12-128"><a href="#cb12-128" tabindex="-1"></a><span class="co">#&gt; Epoch 56, Loss: 219.040399314943 </span></span>
+<span id="cb12-129"><a href="#cb12-129" tabindex="-1"></a><span class="co">#&gt; Epoch 57, Loss: 168.912513283659 </span></span>
+<span id="cb12-130"><a href="#cb12-130" tabindex="-1"></a><span class="co">#&gt; Epoch 58, Loss: 215.202800372415 </span></span>
+<span id="cb12-131"><a href="#cb12-131" tabindex="-1"></a><span class="co">#&gt; Epoch 59, Loss: 210.237844987349 </span></span>
+<span id="cb12-132"><a href="#cb12-132" tabindex="-1"></a><span class="co">#&gt; Epoch 60, Loss: 180.536022517307 </span></span>
+<span id="cb12-133"><a href="#cb12-133" tabindex="-1"></a><span class="co">#&gt; Epoch 61, Loss: 181.32122688057 </span></span>
+<span id="cb12-134"><a href="#cb12-134" tabindex="-1"></a><span class="co">#&gt; Epoch 62, Loss: 179.940454297814 </span></span>
+<span id="cb12-135"><a href="#cb12-135" tabindex="-1"></a><span class="co">#&gt; Epoch 63, Loss: 377.394526694432 </span></span>
+<span id="cb12-136"><a href="#cb12-136" tabindex="-1"></a><span class="co">#&gt; Epoch 64, Loss: 182.246864815389 </span></span>
+<span id="cb12-137"><a href="#cb12-137" tabindex="-1"></a><span class="co">#&gt; Epoch 65, Loss: 330.275170822774 </span></span>
+<span id="cb12-138"><a href="#cb12-138" tabindex="-1"></a><span class="co">#&gt; Epoch 66, Loss: 250.748236474912 </span></span>
+<span id="cb12-139"><a href="#cb12-139" tabindex="-1"></a><span class="co">#&gt; Epoch 67, Loss: 217.449901131559 </span></span>
+<span id="cb12-140"><a href="#cb12-140" tabindex="-1"></a><span class="co">#&gt; Epoch 68, Loss: 189.263614875226 </span></span>
+<span id="cb12-141"><a href="#cb12-141" tabindex="-1"></a><span class="co">#&gt; Epoch 69, Loss: 109.94327849396 </span></span>
+<span id="cb12-142"><a href="#cb12-142" tabindex="-1"></a><span class="co">#&gt; Epoch 70, Loss: 166.177201586321 </span></span>
+<span id="cb12-143"><a href="#cb12-143" tabindex="-1"></a><span class="co">#&gt; Epoch 71, Loss: 283.931539645865 </span></span>
+<span id="cb12-144"><a href="#cb12-144" tabindex="-1"></a><span class="co">#&gt; Epoch 72, Loss: 232.54635231554 </span></span>
+<span id="cb12-145"><a href="#cb12-145" tabindex="-1"></a><span class="co">#&gt; Epoch 73, Loss: 298.337605909868 </span></span>
+<span id="cb12-146"><a href="#cb12-146" tabindex="-1"></a><span class="co">#&gt; Epoch 74, Loss: 258.18352062446 </span></span>
+<span id="cb12-147"><a href="#cb12-147" tabindex="-1"></a><span class="co">#&gt; Epoch 75, Loss: 124.089763795049 </span></span>
+<span id="cb12-148"><a href="#cb12-148" tabindex="-1"></a><span class="co">#&gt; Epoch 76, Loss: 244.722624408312 </span></span>
+<span id="cb12-149"><a href="#cb12-149" tabindex="-1"></a><span class="co">#&gt; Epoch 77, Loss: 178.052506052758 </span></span>
+<span id="cb12-150"><a href="#cb12-150" tabindex="-1"></a><span class="co">#&gt; Epoch 78, Loss: 210.358471846778 </span></span>
+<span id="cb12-151"><a href="#cb12-151" tabindex="-1"></a><span class="co">#&gt; Epoch 79, Loss: 162.881171360489 </span></span>
+<span id="cb12-152"><a href="#cb12-152" tabindex="-1"></a><span class="co">#&gt; Epoch 80, Loss: 169.005007282762 </span></span>
+<span id="cb12-153"><a href="#cb12-153" tabindex="-1"></a><span class="co">#&gt; Epoch 81, Loss: 152.435938839085 </span></span>
+<span id="cb12-154"><a href="#cb12-154" tabindex="-1"></a><span class="co">#&gt; Epoch 82, Loss: 197.56115240696 </span></span>
+<span id="cb12-155"><a href="#cb12-155" tabindex="-1"></a><span class="co">#&gt; Epoch 83, Loss: 162.823340281967 </span></span>
+<span id="cb12-156"><a href="#cb12-156" tabindex="-1"></a><span class="co">#&gt; Epoch 84, Loss: 229.339593698171 </span></span>
+<span id="cb12-157"><a href="#cb12-157" tabindex="-1"></a><span class="co">#&gt; Epoch 85, Loss: 224.162013203645 </span></span>
+<span id="cb12-158"><a href="#cb12-158" tabindex="-1"></a><span class="co">#&gt; Epoch 86, Loss: 179.810190011647 </span></span>
+<span id="cb12-159"><a href="#cb12-159" tabindex="-1"></a><span class="co">#&gt; Epoch 87, Loss: 136.141612833196 </span></span>
+<span id="cb12-160"><a href="#cb12-160" tabindex="-1"></a><span class="co">#&gt; Epoch 88, Loss: 189.671198576935 </span></span>
+<span id="cb12-161"><a href="#cb12-161" tabindex="-1"></a><span class="co">#&gt; Epoch 89, Loss: 167.161435418878 </span></span>
+<span id="cb12-162"><a href="#cb12-162" tabindex="-1"></a><span class="co">#&gt; Epoch 90, Loss: 228.490235967084 </span></span>
+<span id="cb12-163"><a href="#cb12-163" tabindex="-1"></a><span class="co">#&gt; Epoch 91, Loss: 224.193390570396 </span></span>
+<span id="cb12-164"><a href="#cb12-164" tabindex="-1"></a><span class="co">#&gt; Epoch 92, Loss: 256.064108162872 </span></span>
+<span id="cb12-165"><a href="#cb12-165" tabindex="-1"></a><span class="co">#&gt; Epoch 93, Loss: 256.803111304922 </span></span>
+<span id="cb12-166"><a href="#cb12-166" tabindex="-1"></a><span class="co">#&gt; Epoch 94, Loss: 201.273856470408 </span></span>
+<span id="cb12-167"><a href="#cb12-167" tabindex="-1"></a><span class="co">#&gt; Epoch 95, Loss: 219.729552923155 </span></span>
+<span id="cb12-168"><a href="#cb12-168" tabindex="-1"></a><span class="co">#&gt; Epoch 96, Loss: 122.999117754708 </span></span>
+<span id="cb12-169"><a href="#cb12-169" tabindex="-1"></a><span class="co">#&gt; Epoch 97, Loss: 156.944777409892 </span></span>
+<span id="cb12-170"><a href="#cb12-170" tabindex="-1"></a><span class="co">#&gt; Epoch 98, Loss: 241.605259107164 </span></span>
+<span id="cb12-171"><a href="#cb12-171" tabindex="-1"></a><span class="co">#&gt; Epoch 99, Loss: 201.246388356548 </span></span>
+<span id="cb12-172"><a href="#cb12-172" tabindex="-1"></a><span class="co">#&gt; Epoch 100, Loss: 143.940561014759 </span></span>
+<span id="cb12-173"><a href="#cb12-173" tabindex="-1"></a><span class="co">#&gt; Epoch 101, Loss: 273.669565748577 </span></span>
+<span id="cb12-174"><a href="#cb12-174" tabindex="-1"></a><span class="co">#&gt; Epoch 102, Loss: 208.784079669921 </span></span>
+<span id="cb12-175"><a href="#cb12-175" tabindex="-1"></a><span class="co">#&gt; Epoch 103, Loss: 368.416740401717 </span></span>
+<span id="cb12-176"><a href="#cb12-176" tabindex="-1"></a><span class="co">#&gt; Epoch 104, Loss: 188.357977252361 </span></span>
+<span id="cb12-177"><a href="#cb12-177" tabindex="-1"></a><span class="co">#&gt; Epoch 105, Loss: 280.258995497522 </span></span>
+<span id="cb12-178"><a href="#cb12-178" tabindex="-1"></a><span class="co">#&gt; Epoch 106, Loss: 184.617778541628 </span></span>
+<span id="cb12-179"><a href="#cb12-179" tabindex="-1"></a><span class="co">#&gt; Epoch 107, Loss: 291.488351585451 </span></span>
+<span id="cb12-180"><a href="#cb12-180" tabindex="-1"></a><span class="co">#&gt; Epoch 108, Loss: 117.552452528772 </span></span>
+<span id="cb12-181"><a href="#cb12-181" tabindex="-1"></a><span class="co">#&gt; Epoch 109, Loss: 176.083658218384 </span></span>
+<span id="cb12-182"><a href="#cb12-182" tabindex="-1"></a><span class="co">#&gt; Epoch 110, Loss: 232.304984936044 </span></span>
+<span id="cb12-183"><a href="#cb12-183" tabindex="-1"></a><span class="co">#&gt; Epoch 111, Loss: 181.204858322774 </span></span>
+<span id="cb12-184"><a href="#cb12-184" tabindex="-1"></a><span class="co">#&gt; Epoch 112, Loss: 166.720139330084 </span></span>
+<span id="cb12-185"><a href="#cb12-185" tabindex="-1"></a><span class="co">#&gt; Epoch 113, Loss: 178.166042824422 </span></span>
+<span id="cb12-186"><a href="#cb12-186" tabindex="-1"></a><span class="co">#&gt; Epoch 114, Loss: 174.91337388015 </span></span>
+<span id="cb12-187"><a href="#cb12-187" tabindex="-1"></a><span class="co">#&gt; Epoch 115, Loss: 160.16511631012 </span></span>
+<span id="cb12-188"><a href="#cb12-188" tabindex="-1"></a><span class="co">#&gt; Epoch 116, Loss: 167.098607859336 </span></span>
+<span id="cb12-189"><a href="#cb12-189" tabindex="-1"></a><span class="co">#&gt; Epoch 117, Loss: 197.056573063874 </span></span>
+<span id="cb12-190"><a href="#cb12-190" tabindex="-1"></a><span class="co">#&gt; Epoch 118, Loss: 113.317408112455 </span></span>
+<span id="cb12-191"><a href="#cb12-191" tabindex="-1"></a><span class="co">#&gt; Epoch 119, Loss: 119.800391386363 </span></span>
+<span id="cb12-192"><a href="#cb12-192" tabindex="-1"></a><span class="co">#&gt; Epoch 120, Loss: 207.99304916839 </span></span>
+<span id="cb12-193"><a href="#cb12-193" tabindex="-1"></a><span class="co">#&gt; Epoch 121, Loss: 158.676956949155 </span></span>
+<span id="cb12-194"><a href="#cb12-194" tabindex="-1"></a><span class="co">#&gt; Epoch 122, Loss: 179.24272058818 </span></span>
+<span id="cb12-195"><a href="#cb12-195" tabindex="-1"></a><span class="co">#&gt; Epoch 123, Loss: 278.61018346755 </span></span>
+<span id="cb12-196"><a href="#cb12-196" tabindex="-1"></a><span class="co">#&gt; Epoch 124, Loss: 126.288580484627 </span></span>
+<span id="cb12-197"><a href="#cb12-197" tabindex="-1"></a><span class="co">#&gt; Epoch 125, Loss: 237.820151021658 </span></span>
+<span id="cb12-198"><a href="#cb12-198" tabindex="-1"></a><span class="co">#&gt; Epoch 126, Loss: 239.630364544135 </span></span>
+<span id="cb12-199"><a href="#cb12-199" tabindex="-1"></a><span class="co">#&gt; Epoch 127, Loss: 266.673330819311 </span></span>
+<span id="cb12-200"><a href="#cb12-200" tabindex="-1"></a><span class="co">#&gt; Epoch 128, Loss: 234.924410260413 </span></span>
+<span id="cb12-201"><a href="#cb12-201" tabindex="-1"></a><span class="co">#&gt; Epoch 129, Loss: 186.461223255504 </span></span>
+<span id="cb12-202"><a href="#cb12-202" tabindex="-1"></a><span class="co">#&gt; Epoch 130, Loss: 130.661871720937 </span></span>
+<span id="cb12-203"><a href="#cb12-203" tabindex="-1"></a><span class="co">#&gt; Epoch 131, Loss: 162.370527164995 </span></span>
+<span id="cb12-204"><a href="#cb12-204" tabindex="-1"></a><span class="co">#&gt; Epoch 132, Loss: 253.665363453636 </span></span>
+<span id="cb12-205"><a href="#cb12-205" tabindex="-1"></a><span class="co">#&gt; Epoch 133, Loss: 181.136968683605 </span></span>
+<span id="cb12-206"><a href="#cb12-206" tabindex="-1"></a><span class="co">#&gt; Epoch 134, Loss: 132.952007096661 </span></span>
+<span id="cb12-207"><a href="#cb12-207" tabindex="-1"></a><span class="co">#&gt; Epoch 135, Loss: 181.6854283987 </span></span>
+<span id="cb12-208"><a href="#cb12-208" tabindex="-1"></a><span class="co">#&gt; Epoch 136, Loss: 195.796101467669 </span></span>
+<span id="cb12-209"><a href="#cb12-209" tabindex="-1"></a><span class="co">#&gt; Epoch 137, Loss: 296.173334799522 </span></span>
+<span id="cb12-210"><a href="#cb12-210" tabindex="-1"></a><span class="co">#&gt; Epoch 138, Loss: 263.856579384528 </span></span>
+<span id="cb12-211"><a href="#cb12-211" tabindex="-1"></a><span class="co">#&gt; Epoch 139, Loss: 163.241480322909 </span></span>
+<span id="cb12-212"><a href="#cb12-212" tabindex="-1"></a><span class="co">#&gt; Epoch 140, Loss: 216.97328833115 </span></span>
+<span id="cb12-213"><a href="#cb12-213" tabindex="-1"></a><span class="co">#&gt; Epoch 141, Loss: 175.375728000294 </span></span>
+<span id="cb12-214"><a href="#cb12-214" tabindex="-1"></a><span class="co">#&gt; Epoch 142, Loss: 158.889377830442 </span></span>
+<span id="cb12-215"><a href="#cb12-215" tabindex="-1"></a><span class="co">#&gt; Epoch 143, Loss: 200.16865962793 </span></span>
+<span id="cb12-216"><a href="#cb12-216" tabindex="-1"></a><span class="co">#&gt; Epoch 144, Loss: 183.033628274587 </span></span>
+<span id="cb12-217"><a href="#cb12-217" tabindex="-1"></a><span class="co">#&gt; Epoch 145, Loss: 216.904504925751 </span></span>
+<span id="cb12-218"><a href="#cb12-218" tabindex="-1"></a><span class="co">#&gt; Epoch 146, Loss: 153.260857416579 </span></span>
+<span id="cb12-219"><a href="#cb12-219" tabindex="-1"></a><span class="co">#&gt; Epoch 147, Loss: 169.850857506114 </span></span>
+<span id="cb12-220"><a href="#cb12-220" tabindex="-1"></a><span class="co">#&gt; Epoch 148, Loss: 114.677366465576 </span></span>
+<span id="cb12-221"><a href="#cb12-221" tabindex="-1"></a><span class="co">#&gt; Epoch 149, Loss: 133.893552650105 </span></span>
+<span id="cb12-222"><a href="#cb12-222" tabindex="-1"></a><span class="co">#&gt; Epoch 150, Loss: 178.765142878225 </span></span>
+<span id="cb12-223"><a href="#cb12-223" tabindex="-1"></a><span class="co">#&gt; Epoch 151, Loss: 161.270707047675 </span></span>
+<span id="cb12-224"><a href="#cb12-224" tabindex="-1"></a><span class="co">#&gt; Epoch 152, Loss: 151.528181852388 </span></span>
+<span id="cb12-225"><a href="#cb12-225" tabindex="-1"></a><span class="co">#&gt; Epoch 153, Loss: 196.665392193912 </span></span>
+<span id="cb12-226"><a href="#cb12-226" tabindex="-1"></a><span class="co">#&gt; Epoch 154, Loss: 204.875193595886 </span></span>
+<span id="cb12-227"><a href="#cb12-227" tabindex="-1"></a><span class="co">#&gt; Epoch 155, Loss: 152.971034341607 </span></span>
+<span id="cb12-228"><a href="#cb12-228" tabindex="-1"></a><span class="co">#&gt; Epoch 156, Loss: 123.422248808806 </span></span>
+<span id="cb12-229"><a href="#cb12-229" tabindex="-1"></a><span class="co">#&gt; Epoch 157, Loss: 166.462538206873 </span></span>
+<span id="cb12-230"><a href="#cb12-230" tabindex="-1"></a><span class="co">#&gt; Epoch 158, Loss: 185.558285996934 </span></span>
+<span id="cb12-231"><a href="#cb12-231" tabindex="-1"></a><span class="co">#&gt; Epoch 159, Loss: 240.903504883947 </span></span>
+<span id="cb12-232"><a href="#cb12-232" tabindex="-1"></a><span class="co">#&gt; Epoch 160, Loss: 243.079016638196 </span></span>
+<span id="cb12-233"><a href="#cb12-233" tabindex="-1"></a><span class="co">#&gt; Epoch 161, Loss: 215.843253285432 </span></span>
+<span id="cb12-234"><a href="#cb12-234" tabindex="-1"></a><span class="co">#&gt; Epoch 162, Loss: 149.752245296131 </span></span>
+<span id="cb12-235"><a href="#cb12-235" tabindex="-1"></a><span class="co">#&gt; Epoch 163, Loss: 207.0191768063 </span></span>
+<span id="cb12-236"><a href="#cb12-236" tabindex="-1"></a><span class="co">#&gt; Epoch 164, Loss: 204.61955219458 </span></span>
+<span id="cb12-237"><a href="#cb12-237" tabindex="-1"></a><span class="co">#&gt; Epoch 165, Loss: 162.689053385711 </span></span>
+<span id="cb12-238"><a href="#cb12-238" tabindex="-1"></a><span class="co">#&gt; Epoch 166, Loss: 106.757962104703 </span></span>
+<span id="cb12-239"><a href="#cb12-239" tabindex="-1"></a><span class="co">#&gt; Epoch 167, Loss: 142.155281728949 </span></span>
+<span id="cb12-240"><a href="#cb12-240" tabindex="-1"></a><span class="co">#&gt; Epoch 168, Loss: 149.091427448367 </span></span>
+<span id="cb12-241"><a href="#cb12-241" tabindex="-1"></a><span class="co">#&gt; Epoch 169, Loss: 204.388987028894 </span></span>
+<span id="cb12-242"><a href="#cb12-242" tabindex="-1"></a><span class="co">#&gt; Epoch 170, Loss: 139.225882514449 </span></span>
+<span id="cb12-243"><a href="#cb12-243" tabindex="-1"></a><span class="co">#&gt; Epoch 171, Loss: 172.30998296186 </span></span>
+<span id="cb12-244"><a href="#cb12-244" tabindex="-1"></a><span class="co">#&gt; Epoch 172, Loss: 169.778146357576 </span></span>
+<span id="cb12-245"><a href="#cb12-245" tabindex="-1"></a><span class="co">#&gt; Epoch 173, Loss: 147.231516152374 </span></span>
+<span id="cb12-246"><a href="#cb12-246" tabindex="-1"></a><span class="co">#&gt; Epoch 174, Loss: 178.279151246567 </span></span>
+<span id="cb12-247"><a href="#cb12-247" tabindex="-1"></a><span class="co">#&gt; Epoch 175, Loss: 214.919701619582 </span></span>
+<span id="cb12-248"><a href="#cb12-248" tabindex="-1"></a><span class="co">#&gt; Epoch 176, Loss: 101.928135300471 </span></span>
+<span id="cb12-249"><a href="#cb12-249" tabindex="-1"></a><span class="co">#&gt; Epoch 177, Loss: 121.235686550456 </span></span>
+<span id="cb12-250"><a href="#cb12-250" tabindex="-1"></a><span class="co">#&gt; Epoch 178, Loss: 196.155047014725 </span></span>
+<span id="cb12-251"><a href="#cb12-251" tabindex="-1"></a><span class="co">#&gt; Epoch 179, Loss: 205.317161150215 </span></span>
+<span id="cb12-252"><a href="#cb12-252" tabindex="-1"></a><span class="co">#&gt; Epoch 180, Loss: 168.974594463002 </span></span>
+<span id="cb12-253"><a href="#cb12-253" tabindex="-1"></a><span class="co">#&gt; Epoch 181, Loss: 169.767003437704 </span></span>
+<span id="cb12-254"><a href="#cb12-254" tabindex="-1"></a><span class="co">#&gt; Epoch 182, Loss: 167.843659668915 </span></span>
+<span id="cb12-255"><a href="#cb12-255" tabindex="-1"></a><span class="co">#&gt; Epoch 183, Loss: 196.194349273177 </span></span>
+<span id="cb12-256"><a href="#cb12-256" tabindex="-1"></a><span class="co">#&gt; Epoch 184, Loss: 298.45686521609 </span></span>
+<span id="cb12-257"><a href="#cb12-257" tabindex="-1"></a><span class="co">#&gt; Epoch 185, Loss: 184.079287781203 </span></span>
+<span id="cb12-258"><a href="#cb12-258" tabindex="-1"></a><span class="co">#&gt; Epoch 186, Loss: 174.389887683648 </span></span>
+<span id="cb12-259"><a href="#cb12-259" tabindex="-1"></a><span class="co">#&gt; Epoch 187, Loss: 202.000613583021 </span></span>
+<span id="cb12-260"><a href="#cb12-260" tabindex="-1"></a><span class="co">#&gt; Epoch 188, Loss: 104.379987346239 </span></span>
+<span id="cb12-261"><a href="#cb12-261" tabindex="-1"></a><span class="co">#&gt; Epoch 189, Loss: 161.615289530478 </span></span>
+<span id="cb12-262"><a href="#cb12-262" tabindex="-1"></a><span class="co">#&gt; Epoch 190, Loss: 166.651733272332 </span></span>
+<span id="cb12-263"><a href="#cb12-263" tabindex="-1"></a><span class="co">#&gt; Epoch 191, Loss: 166.834963656654 </span></span>
+<span id="cb12-264"><a href="#cb12-264" tabindex="-1"></a><span class="co">#&gt; Epoch 192, Loss: 175.318636909989 </span></span>
+<span id="cb12-265"><a href="#cb12-265" tabindex="-1"></a><span class="co">#&gt; Epoch 193, Loss: 112.308998419234 </span></span>
+<span id="cb12-266"><a href="#cb12-266" tabindex="-1"></a><span class="co">#&gt; Epoch 194, Loss: 184.109495785611 </span></span>
+<span id="cb12-267"><a href="#cb12-267" tabindex="-1"></a><span class="co">#&gt; Epoch 195, Loss: 167.697754670766 </span></span>
+<span id="cb12-268"><a href="#cb12-268" tabindex="-1"></a><span class="co">#&gt; Epoch 196, Loss: 130.969828625356 </span></span>
+<span id="cb12-269"><a href="#cb12-269" tabindex="-1"></a><span class="co">#&gt; Epoch 197, Loss: 101.930589076901 </span></span>
+<span id="cb12-270"><a href="#cb12-270" tabindex="-1"></a><span class="co">#&gt; Epoch 198, Loss: 109.292294912102 </span></span>
+<span id="cb12-271"><a href="#cb12-271" tabindex="-1"></a><span class="co">#&gt; Epoch 199, Loss: 101.209236058322 </span></span>
+<span id="cb12-272"><a href="#cb12-272" tabindex="-1"></a><span class="co">#&gt; Epoch 200, Loss: 130.051142826553</span></span>
+<span id="cb12-273"><a href="#cb12-273" tabindex="-1"></a></span>
+<span id="cb12-274"><a href="#cb12-274" tabindex="-1"></a></span>
+<span id="cb12-275"><a href="#cb12-275" tabindex="-1"></a>fitted_scorch_model<span class="sc">$</span><span class="fu">eval</span>()</span>
+<span id="cb12-276"><a href="#cb12-276" tabindex="-1"></a></span>
+<span id="cb12-277"><a href="#cb12-277" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(test_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb12-278"><a href="#cb12-278" tabindex="-1"></a>y_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(test_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb12-279"><a href="#cb12-279" tabindex="-1"></a></span>
+<span id="cb12-280"><a href="#cb12-280" tabindex="-1"></a>output <span class="ot">&lt;-</span> <span class="fu">fitted_scorch_model</span>(x_test)</span>
+<span id="cb12-281"><a href="#cb12-281" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">torch_argmax</span>(output, <span class="at">dim =</span> <span class="dv">2</span>)</span>
+<span id="cb12-282"><a href="#cb12-282" tabindex="-1"></a></span>
+<span id="cb12-283"><a href="#cb12-283" tabindex="-1"></a>accuracy <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred <span class="sc">==</span> y_test)<span class="sc">$</span><span class="fu">item</span>() <span class="sc">/</span> <span class="fu">length</span>(y_test)</span>
+<span id="cb12-284"><a href="#cb12-284" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Test Accuracy: %.2f%%</span><span class="sc">\n</span><span class="st">&quot;</span>, accuracy <span class="sc">*</span> <span class="dv">100</span>))</span>
+<span id="cb12-285"><a href="#cb12-285" tabindex="-1"></a><span class="co">#&gt; Test Accuracy: 62.14%</span></span></code></pre></div>
+<blockquote>
+<p>No log variables produces less accurate estimates</p>
+</blockquote>
+<ol start="2" style="list-style-type: decimal">
+<li>Do the same as Task 1 but standardize income and loan_amount instead
+of log transform it. How normal are the variables? What happens to the
+model’s performance?</li>
+</ol>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span> <span class="fu">select</span>(action_taken, income, loan_amount)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2 <span class="sc">%&gt;%</span> <span class="fu">filter</span>(action_taken <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>), income<span class="sc">&gt;</span><span class="dv">0</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2 <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">action_taken =</span> <span class="fu">case_when</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">1</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">3</span> <span class="sc">~</span> <span class="dv">2</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  action_taken<span class="sc">==</span><span class="dv">4</span> <span class="sc">~</span> <span class="dv">3</span>))</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>df2<span class="sc">$</span>income <span class="ot">&lt;-</span> <span class="fu">scale</span>(df2<span class="sc">$</span>income)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>df2<span class="sc">$</span>loan_amount <span class="ot">&lt;-</span> <span class="fu">scale</span>(df2<span class="sc">$</span>loan_amount)</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> df2[<span class="fu">complete.cases</span>(df2), ]</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>train_indices <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(df2), <span class="fl">0.8</span> <span class="sc">*</span> <span class="fu">nrow</span>(df2))</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> df2[train_indices, ]</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> df2[<span class="sc">-</span>train_indices, ]</span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co"># Create the dataloader</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a>x_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(train_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a>y_train <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(train_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a>dl <span class="ot">&lt;-</span> <span class="fu">scorch_create_dataloader</span>(x_train, y_train, <span class="at">batch_size =</span> <span class="dv">50</span>)</span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="co"># Define the neural network</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a><span class="co">#n_var = dim(df1)[2]</span></span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a>n_var <span class="ot">=</span> <span class="dv">2</span></span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a>n_classes <span class="ot">=</span> <span class="fu">length</span>(<span class="fu">unique</span>(df2<span class="sc">$</span>action_taken))</span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a>scorch_model <span class="ot">&lt;-</span> dl <span class="sc">|&gt;</span> </span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a>  <span class="fu">initiate_scorch</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, n_var, <span class="dv">16</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;relu&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a>  <span class="fu">scorch_layer</span>(<span class="st">&quot;linear&quot;</span>, <span class="dv">16</span>, n_classes)</span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a></span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a>scorch_model</span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a><span class="co">#&gt; This scorch model has a dataloader object with features: </span></span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a><span class="co">#&gt; This is a dataloader object with features:</span></span>
+<span id="cb13-42"><a href="#cb13-42" tabindex="-1"></a><span class="co">#&gt;  * Batch size: 50</span></span>
+<span id="cb13-43"><a href="#cb13-43" tabindex="-1"></a><span class="co">#&gt;  * Number of batches: 121</span></span>
+<span id="cb13-44"><a href="#cb13-44" tabindex="-1"></a><span class="co">#&gt;  * Dimension of input tensors: 2</span></span>
+<span id="cb13-45"><a href="#cb13-45" tabindex="-1"></a><span class="co">#&gt;  * Dimension of output tensors: 1</span></span>
+<span id="cb13-46"><a href="#cb13-46" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-47"><a href="#cb13-47" tabindex="-1"></a><span class="co">#&gt;  and model architecture:</span></span>
+<span id="cb13-48"><a href="#cb13-48" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-49"><a href="#cb13-49" tabindex="-1"></a><span class="co">#&gt; * Layer 1 is a nn_linear layer</span></span>
+<span id="cb13-50"><a href="#cb13-50" tabindex="-1"></a><span class="co">#&gt; * Layer 2 is a nn_relu layer</span></span>
+<span id="cb13-51"><a href="#cb13-51" tabindex="-1"></a><span class="co">#&gt; * Layer 3 is a nn_linear layer</span></span>
+<span id="cb13-52"><a href="#cb13-52" tabindex="-1"></a><span class="co"># Compile the neural network</span></span>
+<span id="cb13-53"><a href="#cb13-53" tabindex="-1"></a></span>
+<span id="cb13-54"><a href="#cb13-54" tabindex="-1"></a>compiled_scorch_model <span class="ot">&lt;-</span> scorch_model <span class="sc">|&gt;</span></span>
+<span id="cb13-55"><a href="#cb13-55" tabindex="-1"></a>  <span class="fu">compile_scorch</span>()</span>
+<span id="cb13-56"><a href="#cb13-56" tabindex="-1"></a></span>
+<span id="cb13-57"><a href="#cb13-57" tabindex="-1"></a><span class="co"># Define weights for imbalanced classes</span></span>
+<span id="cb13-58"><a href="#cb13-58" tabindex="-1"></a></span>
+<span id="cb13-59"><a href="#cb13-59" tabindex="-1"></a>weight <span class="ot">&lt;-</span> <span class="fu">length</span>(train_data<span class="sc">$</span>action_taken) <span class="sc">/</span></span>
+<span id="cb13-60"><a href="#cb13-60" tabindex="-1"></a>  (n_classes <span class="sc">*</span> <span class="fu">torch_stack</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span>n_classes, <span class="cf">function</span>(i) <span class="fu">sum</span>(train_data<span class="sc">$</span>action_taken <span class="sc">==</span> i))))</span>
+<span id="cb13-61"><a href="#cb13-61" tabindex="-1"></a></span>
+<span id="cb13-62"><a href="#cb13-62" tabindex="-1"></a>weight <span class="ot">&lt;-</span> weight<span class="sc">$</span><span class="fu">squeeze</span>()</span>
+<span id="cb13-63"><a href="#cb13-63" tabindex="-1"></a></span>
+<span id="cb13-64"><a href="#cb13-64" tabindex="-1"></a><span class="co"># Fit the neural network</span></span>
+<span id="cb13-65"><a href="#cb13-65" tabindex="-1"></a></span>
+<span id="cb13-66"><a href="#cb13-66" tabindex="-1"></a>fitted_scorch_model <span class="ot">&lt;-</span> compiled_scorch_model <span class="sc">|&gt;</span> </span>
+<span id="cb13-67"><a href="#cb13-67" tabindex="-1"></a>  <span class="fu">fit_scorch</span>(</span>
+<span id="cb13-68"><a href="#cb13-68" tabindex="-1"></a>    <span class="at">loss =</span> nn_cross_entropy_loss,</span>
+<span id="cb13-69"><a href="#cb13-69" tabindex="-1"></a>    <span class="at">loss_params =</span> <span class="fu">list</span>(<span class="at">weight =</span> weight),</span>
+<span id="cb13-70"><a href="#cb13-70" tabindex="-1"></a>    <span class="at">num_epochs =</span> <span class="dv">200</span>, </span>
+<span id="cb13-71"><a href="#cb13-71" tabindex="-1"></a>    <span class="at">verbose =</span> T)</span>
+<span id="cb13-72"><a href="#cb13-72" tabindex="-1"></a><span class="co">#&gt; No GPU detected. Using available CPU.</span></span>
+<span id="cb13-73"><a href="#cb13-73" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-74"><a href="#cb13-74" tabindex="-1"></a><span class="co">#&gt; Epoch 1, Loss: 1.10858528771676 </span></span>
+<span id="cb13-75"><a href="#cb13-75" tabindex="-1"></a><span class="co">#&gt; Epoch 2, Loss: 1.07880434911113 </span></span>
+<span id="cb13-76"><a href="#cb13-76" tabindex="-1"></a><span class="co">#&gt; Epoch 3, Loss: 1.06732997519911 </span></span>
+<span id="cb13-77"><a href="#cb13-77" tabindex="-1"></a><span class="co">#&gt; Epoch 4, Loss: 1.06373539739404 </span></span>
+<span id="cb13-78"><a href="#cb13-78" tabindex="-1"></a><span class="co">#&gt; Epoch 5, Loss: 1.0616226063287 </span></span>
+<span id="cb13-79"><a href="#cb13-79" tabindex="-1"></a><span class="co">#&gt; Epoch 6, Loss: 1.06069271672856 </span></span>
+<span id="cb13-80"><a href="#cb13-80" tabindex="-1"></a><span class="co">#&gt; Epoch 7, Loss: 1.05976950087823 </span></span>
+<span id="cb13-81"><a href="#cb13-81" tabindex="-1"></a><span class="co">#&gt; Epoch 8, Loss: 1.05895617037765 </span></span>
+<span id="cb13-82"><a href="#cb13-82" tabindex="-1"></a><span class="co">#&gt; Epoch 9, Loss: 1.05859198944628 </span></span>
+<span id="cb13-83"><a href="#cb13-83" tabindex="-1"></a><span class="co">#&gt; Epoch 10, Loss: 1.05852057322983 </span></span>
+<span id="cb13-84"><a href="#cb13-84" tabindex="-1"></a><span class="co">#&gt; Epoch 11, Loss: 1.05862820493288 </span></span>
+<span id="cb13-85"><a href="#cb13-85" tabindex="-1"></a><span class="co">#&gt; Epoch 12, Loss: 1.0581722954088 </span></span>
+<span id="cb13-86"><a href="#cb13-86" tabindex="-1"></a><span class="co">#&gt; Epoch 13, Loss: 1.05717849731445 </span></span>
+<span id="cb13-87"><a href="#cb13-87" tabindex="-1"></a><span class="co">#&gt; Epoch 14, Loss: 1.05608364570239 </span></span>
+<span id="cb13-88"><a href="#cb13-88" tabindex="-1"></a><span class="co">#&gt; Epoch 15, Loss: 1.05736773959861 </span></span>
+<span id="cb13-89"><a href="#cb13-89" tabindex="-1"></a><span class="co">#&gt; Epoch 16, Loss: 1.05583241064686 </span></span>
+<span id="cb13-90"><a href="#cb13-90" tabindex="-1"></a><span class="co">#&gt; Epoch 17, Loss: 1.05519852165348 </span></span>
+<span id="cb13-91"><a href="#cb13-91" tabindex="-1"></a><span class="co">#&gt; Epoch 18, Loss: 1.05565085785448 </span></span>
+<span id="cb13-92"><a href="#cb13-92" tabindex="-1"></a><span class="co">#&gt; Epoch 19, Loss: 1.0542749659089 </span></span>
+<span id="cb13-93"><a href="#cb13-93" tabindex="-1"></a><span class="co">#&gt; Epoch 20, Loss: 1.05513045265655 </span></span>
+<span id="cb13-94"><a href="#cb13-94" tabindex="-1"></a><span class="co">#&gt; Epoch 21, Loss: 1.05371784966839 </span></span>
+<span id="cb13-95"><a href="#cb13-95" tabindex="-1"></a><span class="co">#&gt; Epoch 22, Loss: 1.05368214845657 </span></span>
+<span id="cb13-96"><a href="#cb13-96" tabindex="-1"></a><span class="co">#&gt; Epoch 23, Loss: 1.05482212915893 </span></span>
+<span id="cb13-97"><a href="#cb13-97" tabindex="-1"></a><span class="co">#&gt; Epoch 24, Loss: 1.05273708134643 </span></span>
+<span id="cb13-98"><a href="#cb13-98" tabindex="-1"></a><span class="co">#&gt; Epoch 25, Loss: 1.05202146305526 </span></span>
+<span id="cb13-99"><a href="#cb13-99" tabindex="-1"></a><span class="co">#&gt; Epoch 26, Loss: 1.05084791065248 </span></span>
+<span id="cb13-100"><a href="#cb13-100" tabindex="-1"></a><span class="co">#&gt; Epoch 27, Loss: 1.05190271483965 </span></span>
+<span id="cb13-101"><a href="#cb13-101" tabindex="-1"></a><span class="co">#&gt; Epoch 28, Loss: 1.05092420213479 </span></span>
+<span id="cb13-102"><a href="#cb13-102" tabindex="-1"></a><span class="co">#&gt; Epoch 29, Loss: 1.0514440546351 </span></span>
+<span id="cb13-103"><a href="#cb13-103" tabindex="-1"></a><span class="co">#&gt; Epoch 30, Loss: 1.05106967342787 </span></span>
+<span id="cb13-104"><a href="#cb13-104" tabindex="-1"></a><span class="co">#&gt; Epoch 31, Loss: 1.04918769617711 </span></span>
+<span id="cb13-105"><a href="#cb13-105" tabindex="-1"></a><span class="co">#&gt; Epoch 32, Loss: 1.04955169090555 </span></span>
+<span id="cb13-106"><a href="#cb13-106" tabindex="-1"></a><span class="co">#&gt; Epoch 33, Loss: 1.05003362105898 </span></span>
+<span id="cb13-107"><a href="#cb13-107" tabindex="-1"></a><span class="co">#&gt; Epoch 34, Loss: 1.04922760271829 </span></span>
+<span id="cb13-108"><a href="#cb13-108" tabindex="-1"></a><span class="co">#&gt; Epoch 35, Loss: 1.04796825509426 </span></span>
+<span id="cb13-109"><a href="#cb13-109" tabindex="-1"></a><span class="co">#&gt; Epoch 36, Loss: 1.04931795941897 </span></span>
+<span id="cb13-110"><a href="#cb13-110" tabindex="-1"></a><span class="co">#&gt; Epoch 37, Loss: 1.04941662283968 </span></span>
+<span id="cb13-111"><a href="#cb13-111" tabindex="-1"></a><span class="co">#&gt; Epoch 38, Loss: 1.04759216062294 </span></span>
+<span id="cb13-112"><a href="#cb13-112" tabindex="-1"></a><span class="co">#&gt; Epoch 39, Loss: 1.04927813563465 </span></span>
+<span id="cb13-113"><a href="#cb13-113" tabindex="-1"></a><span class="co">#&gt; Epoch 40, Loss: 1.04841796277968 </span></span>
+<span id="cb13-114"><a href="#cb13-114" tabindex="-1"></a><span class="co">#&gt; Epoch 41, Loss: 1.04657626792419 </span></span>
+<span id="cb13-115"><a href="#cb13-115" tabindex="-1"></a><span class="co">#&gt; Epoch 42, Loss: 1.04830517749156 </span></span>
+<span id="cb13-116"><a href="#cb13-116" tabindex="-1"></a><span class="co">#&gt; Epoch 43, Loss: 1.04819934870586 </span></span>
+<span id="cb13-117"><a href="#cb13-117" tabindex="-1"></a><span class="co">#&gt; Epoch 44, Loss: 1.04581281813708 </span></span>
+<span id="cb13-118"><a href="#cb13-118" tabindex="-1"></a><span class="co">#&gt; Epoch 45, Loss: 1.04523700672733 </span></span>
+<span id="cb13-119"><a href="#cb13-119" tabindex="-1"></a><span class="co">#&gt; Epoch 46, Loss: 1.04685489156029 </span></span>
+<span id="cb13-120"><a href="#cb13-120" tabindex="-1"></a><span class="co">#&gt; Epoch 47, Loss: 1.04539706539517 </span></span>
+<span id="cb13-121"><a href="#cb13-121" tabindex="-1"></a><span class="co">#&gt; Epoch 48, Loss: 1.04548927033243 </span></span>
+<span id="cb13-122"><a href="#cb13-122" tabindex="-1"></a><span class="co">#&gt; Epoch 49, Loss: 1.04660019697237 </span></span>
+<span id="cb13-123"><a href="#cb13-123" tabindex="-1"></a><span class="co">#&gt; Epoch 50, Loss: 1.0447741126226 </span></span>
+<span id="cb13-124"><a href="#cb13-124" tabindex="-1"></a><span class="co">#&gt; Epoch 51, Loss: 1.04579716083432 </span></span>
+<span id="cb13-125"><a href="#cb13-125" tabindex="-1"></a><span class="co">#&gt; Epoch 52, Loss: 1.0443811505294 </span></span>
+<span id="cb13-126"><a href="#cb13-126" tabindex="-1"></a><span class="co">#&gt; Epoch 53, Loss: 1.04459423910488 </span></span>
+<span id="cb13-127"><a href="#cb13-127" tabindex="-1"></a><span class="co">#&gt; Epoch 54, Loss: 1.04286950334045 </span></span>
+<span id="cb13-128"><a href="#cb13-128" tabindex="-1"></a><span class="co">#&gt; Epoch 55, Loss: 1.04344125867875 </span></span>
+<span id="cb13-129"><a href="#cb13-129" tabindex="-1"></a><span class="co">#&gt; Epoch 56, Loss: 1.04304743995351 </span></span>
+<span id="cb13-130"><a href="#cb13-130" tabindex="-1"></a><span class="co">#&gt; Epoch 57, Loss: 1.04232078002504 </span></span>
+<span id="cb13-131"><a href="#cb13-131" tabindex="-1"></a><span class="co">#&gt; Epoch 58, Loss: 1.04251833444785 </span></span>
+<span id="cb13-132"><a href="#cb13-132" tabindex="-1"></a><span class="co">#&gt; Epoch 59, Loss: 1.04256192810279 </span></span>
+<span id="cb13-133"><a href="#cb13-133" tabindex="-1"></a><span class="co">#&gt; Epoch 60, Loss: 1.04214843294837 </span></span>
+<span id="cb13-134"><a href="#cb13-134" tabindex="-1"></a><span class="co">#&gt; Epoch 61, Loss: 1.04117464280326 </span></span>
+<span id="cb13-135"><a href="#cb13-135" tabindex="-1"></a><span class="co">#&gt; Epoch 62, Loss: 1.04205879347383 </span></span>
+<span id="cb13-136"><a href="#cb13-136" tabindex="-1"></a><span class="co">#&gt; Epoch 63, Loss: 1.04290380753761 </span></span>
+<span id="cb13-137"><a href="#cb13-137" tabindex="-1"></a><span class="co">#&gt; Epoch 64, Loss: 1.04296331711052 </span></span>
+<span id="cb13-138"><a href="#cb13-138" tabindex="-1"></a><span class="co">#&gt; Epoch 65, Loss: 1.04065494694986 </span></span>
+<span id="cb13-139"><a href="#cb13-139" tabindex="-1"></a><span class="co">#&gt; Epoch 66, Loss: 1.0397812083733 </span></span>
+<span id="cb13-140"><a href="#cb13-140" tabindex="-1"></a><span class="co">#&gt; Epoch 67, Loss: 1.03982728719711 </span></span>
+<span id="cb13-141"><a href="#cb13-141" tabindex="-1"></a><span class="co">#&gt; Epoch 68, Loss: 1.0408086215169 </span></span>
+<span id="cb13-142"><a href="#cb13-142" tabindex="-1"></a><span class="co">#&gt; Epoch 69, Loss: 1.03932216049226 </span></span>
+<span id="cb13-143"><a href="#cb13-143" tabindex="-1"></a><span class="co">#&gt; Epoch 70, Loss: 1.04169161162101 </span></span>
+<span id="cb13-144"><a href="#cb13-144" tabindex="-1"></a><span class="co">#&gt; Epoch 71, Loss: 1.03807512738488 </span></span>
+<span id="cb13-145"><a href="#cb13-145" tabindex="-1"></a><span class="co">#&gt; Epoch 72, Loss: 1.03782077613941 </span></span>
+<span id="cb13-146"><a href="#cb13-146" tabindex="-1"></a><span class="co">#&gt; Epoch 73, Loss: 1.03792410497823 </span></span>
+<span id="cb13-147"><a href="#cb13-147" tabindex="-1"></a><span class="co">#&gt; Epoch 74, Loss: 1.04042728824064 </span></span>
+<span id="cb13-148"><a href="#cb13-148" tabindex="-1"></a><span class="co">#&gt; Epoch 75, Loss: 1.03975084350129 </span></span>
+<span id="cb13-149"><a href="#cb13-149" tabindex="-1"></a><span class="co">#&gt; Epoch 76, Loss: 1.03830916970229 </span></span>
+<span id="cb13-150"><a href="#cb13-150" tabindex="-1"></a><span class="co">#&gt; Epoch 77, Loss: 1.038207337876 </span></span>
+<span id="cb13-151"><a href="#cb13-151" tabindex="-1"></a><span class="co">#&gt; Epoch 78, Loss: 1.0371867231101 </span></span>
+<span id="cb13-152"><a href="#cb13-152" tabindex="-1"></a><span class="co">#&gt; Epoch 79, Loss: 1.03796350118543 </span></span>
+<span id="cb13-153"><a href="#cb13-153" tabindex="-1"></a><span class="co">#&gt; Epoch 80, Loss: 1.03823385849472 </span></span>
+<span id="cb13-154"><a href="#cb13-154" tabindex="-1"></a><span class="co">#&gt; Epoch 81, Loss: 1.03767765110189 </span></span>
+<span id="cb13-155"><a href="#cb13-155" tabindex="-1"></a><span class="co">#&gt; Epoch 82, Loss: 1.03801537200439 </span></span>
+<span id="cb13-156"><a href="#cb13-156" tabindex="-1"></a><span class="co">#&gt; Epoch 83, Loss: 1.03661021861163 </span></span>
+<span id="cb13-157"><a href="#cb13-157" tabindex="-1"></a><span class="co">#&gt; Epoch 84, Loss: 1.03734201488416 </span></span>
+<span id="cb13-158"><a href="#cb13-158" tabindex="-1"></a><span class="co">#&gt; Epoch 85, Loss: 1.03727483453829 </span></span>
+<span id="cb13-159"><a href="#cb13-159" tabindex="-1"></a><span class="co">#&gt; Epoch 86, Loss: 1.03858294516556 </span></span>
+<span id="cb13-160"><a href="#cb13-160" tabindex="-1"></a><span class="co">#&gt; Epoch 87, Loss: 1.03853306642249 </span></span>
+<span id="cb13-161"><a href="#cb13-161" tabindex="-1"></a><span class="co">#&gt; Epoch 88, Loss: 1.03648355726368 </span></span>
+<span id="cb13-162"><a href="#cb13-162" tabindex="-1"></a><span class="co">#&gt; Epoch 89, Loss: 1.03778692365678 </span></span>
+<span id="cb13-163"><a href="#cb13-163" tabindex="-1"></a><span class="co">#&gt; Epoch 90, Loss: 1.0347942975927 </span></span>
+<span id="cb13-164"><a href="#cb13-164" tabindex="-1"></a><span class="co">#&gt; Epoch 91, Loss: 1.0374538854134 </span></span>
+<span id="cb13-165"><a href="#cb13-165" tabindex="-1"></a><span class="co">#&gt; Epoch 92, Loss: 1.03691448061919 </span></span>
+<span id="cb13-166"><a href="#cb13-166" tabindex="-1"></a><span class="co">#&gt; Epoch 93, Loss: 1.03861551196122 </span></span>
+<span id="cb13-167"><a href="#cb13-167" tabindex="-1"></a><span class="co">#&gt; Epoch 94, Loss: 1.03677827760208 </span></span>
+<span id="cb13-168"><a href="#cb13-168" tabindex="-1"></a><span class="co">#&gt; Epoch 95, Loss: 1.03563757228457 </span></span>
+<span id="cb13-169"><a href="#cb13-169" tabindex="-1"></a><span class="co">#&gt; Epoch 96, Loss: 1.03675758444573 </span></span>
+<span id="cb13-170"><a href="#cb13-170" tabindex="-1"></a><span class="co">#&gt; Epoch 97, Loss: 1.03622970354459 </span></span>
+<span id="cb13-171"><a href="#cb13-171" tabindex="-1"></a><span class="co">#&gt; Epoch 98, Loss: 1.0371403935527 </span></span>
+<span id="cb13-172"><a href="#cb13-172" tabindex="-1"></a><span class="co">#&gt; Epoch 99, Loss: 1.03738725875035 </span></span>
+<span id="cb13-173"><a href="#cb13-173" tabindex="-1"></a><span class="co">#&gt; Epoch 100, Loss: 1.03667800781155 </span></span>
+<span id="cb13-174"><a href="#cb13-174" tabindex="-1"></a><span class="co">#&gt; Epoch 101, Loss: 1.03636487062312 </span></span>
+<span id="cb13-175"><a href="#cb13-175" tabindex="-1"></a><span class="co">#&gt; Epoch 102, Loss: 1.036381740708 </span></span>
+<span id="cb13-176"><a href="#cb13-176" tabindex="-1"></a><span class="co">#&gt; Epoch 103, Loss: 1.03616866247713 </span></span>
+<span id="cb13-177"><a href="#cb13-177" tabindex="-1"></a><span class="co">#&gt; Epoch 104, Loss: 1.03604670891092 </span></span>
+<span id="cb13-178"><a href="#cb13-178" tabindex="-1"></a><span class="co">#&gt; Epoch 105, Loss: 1.03626392252189 </span></span>
+<span id="cb13-179"><a href="#cb13-179" tabindex="-1"></a><span class="co">#&gt; Epoch 106, Loss: 1.03548395929258 </span></span>
+<span id="cb13-180"><a href="#cb13-180" tabindex="-1"></a><span class="co">#&gt; Epoch 107, Loss: 1.03726409634283 </span></span>
+<span id="cb13-181"><a href="#cb13-181" tabindex="-1"></a><span class="co">#&gt; Epoch 108, Loss: 1.03683413158764 </span></span>
+<span id="cb13-182"><a href="#cb13-182" tabindex="-1"></a><span class="co">#&gt; Epoch 109, Loss: 1.03669367742933 </span></span>
+<span id="cb13-183"><a href="#cb13-183" tabindex="-1"></a><span class="co">#&gt; Epoch 110, Loss: 1.03744198024766 </span></span>
+<span id="cb13-184"><a href="#cb13-184" tabindex="-1"></a><span class="co">#&gt; Epoch 111, Loss: 1.03548724789265 </span></span>
+<span id="cb13-185"><a href="#cb13-185" tabindex="-1"></a><span class="co">#&gt; Epoch 112, Loss: 1.0356997822927 </span></span>
+<span id="cb13-186"><a href="#cb13-186" tabindex="-1"></a><span class="co">#&gt; Epoch 113, Loss: 1.03638958093549 </span></span>
+<span id="cb13-187"><a href="#cb13-187" tabindex="-1"></a><span class="co">#&gt; Epoch 114, Loss: 1.03853017485831 </span></span>
+<span id="cb13-188"><a href="#cb13-188" tabindex="-1"></a><span class="co">#&gt; Epoch 115, Loss: 1.0355906146617 </span></span>
+<span id="cb13-189"><a href="#cb13-189" tabindex="-1"></a><span class="co">#&gt; Epoch 116, Loss: 1.03605168614506 </span></span>
+<span id="cb13-190"><a href="#cb13-190" tabindex="-1"></a><span class="co">#&gt; Epoch 117, Loss: 1.0352447786607 </span></span>
+<span id="cb13-191"><a href="#cb13-191" tabindex="-1"></a><span class="co">#&gt; Epoch 118, Loss: 1.03717832033299 </span></span>
+<span id="cb13-192"><a href="#cb13-192" tabindex="-1"></a><span class="co">#&gt; Epoch 119, Loss: 1.03702106406866 </span></span>
+<span id="cb13-193"><a href="#cb13-193" tabindex="-1"></a><span class="co">#&gt; Epoch 120, Loss: 1.03563917175797 </span></span>
+<span id="cb13-194"><a href="#cb13-194" tabindex="-1"></a><span class="co">#&gt; Epoch 121, Loss: 1.03632666552362 </span></span>
+<span id="cb13-195"><a href="#cb13-195" tabindex="-1"></a><span class="co">#&gt; Epoch 122, Loss: 1.03715421345608 </span></span>
+<span id="cb13-196"><a href="#cb13-196" tabindex="-1"></a><span class="co">#&gt; Epoch 123, Loss: 1.03530737585273 </span></span>
+<span id="cb13-197"><a href="#cb13-197" tabindex="-1"></a><span class="co">#&gt; Epoch 124, Loss: 1.03393090904252 </span></span>
+<span id="cb13-198"><a href="#cb13-198" tabindex="-1"></a><span class="co">#&gt; Epoch 125, Loss: 1.03507804722825 </span></span>
+<span id="cb13-199"><a href="#cb13-199" tabindex="-1"></a><span class="co">#&gt; Epoch 126, Loss: 1.03557128157497 </span></span>
+<span id="cb13-200"><a href="#cb13-200" tabindex="-1"></a><span class="co">#&gt; Epoch 127, Loss: 1.03559965190809 </span></span>
+<span id="cb13-201"><a href="#cb13-201" tabindex="-1"></a><span class="co">#&gt; Epoch 128, Loss: 1.03589321414301 </span></span>
+<span id="cb13-202"><a href="#cb13-202" tabindex="-1"></a><span class="co">#&gt; Epoch 129, Loss: 1.0359842491544 </span></span>
+<span id="cb13-203"><a href="#cb13-203" tabindex="-1"></a><span class="co">#&gt; Epoch 130, Loss: 1.03576529026031 </span></span>
+<span id="cb13-204"><a href="#cb13-204" tabindex="-1"></a><span class="co">#&gt; Epoch 131, Loss: 1.03608328251799 </span></span>
+<span id="cb13-205"><a href="#cb13-205" tabindex="-1"></a><span class="co">#&gt; Epoch 132, Loss: 1.03408042015123 </span></span>
+<span id="cb13-206"><a href="#cb13-206" tabindex="-1"></a><span class="co">#&gt; Epoch 133, Loss: 1.03596143092006 </span></span>
+<span id="cb13-207"><a href="#cb13-207" tabindex="-1"></a><span class="co">#&gt; Epoch 134, Loss: 1.03644620485542 </span></span>
+<span id="cb13-208"><a href="#cb13-208" tabindex="-1"></a><span class="co">#&gt; Epoch 135, Loss: 1.03508419241787 </span></span>
+<span id="cb13-209"><a href="#cb13-209" tabindex="-1"></a><span class="co">#&gt; Epoch 136, Loss: 1.03571523713671 </span></span>
+<span id="cb13-210"><a href="#cb13-210" tabindex="-1"></a><span class="co">#&gt; Epoch 137, Loss: 1.03469217217658 </span></span>
+<span id="cb13-211"><a href="#cb13-211" tabindex="-1"></a><span class="co">#&gt; Epoch 138, Loss: 1.03662064646886 </span></span>
+<span id="cb13-212"><a href="#cb13-212" tabindex="-1"></a><span class="co">#&gt; Epoch 139, Loss: 1.03538980119485 </span></span>
+<span id="cb13-213"><a href="#cb13-213" tabindex="-1"></a><span class="co">#&gt; Epoch 140, Loss: 1.03561163983069 </span></span>
+<span id="cb13-214"><a href="#cb13-214" tabindex="-1"></a><span class="co">#&gt; Epoch 141, Loss: 1.03457922433033 </span></span>
+<span id="cb13-215"><a href="#cb13-215" tabindex="-1"></a><span class="co">#&gt; Epoch 142, Loss: 1.03452054183345 </span></span>
+<span id="cb13-216"><a href="#cb13-216" tabindex="-1"></a><span class="co">#&gt; Epoch 143, Loss: 1.03447018034202 </span></span>
+<span id="cb13-217"><a href="#cb13-217" tabindex="-1"></a><span class="co">#&gt; Epoch 144, Loss: 1.03626487865921 </span></span>
+<span id="cb13-218"><a href="#cb13-218" tabindex="-1"></a><span class="co">#&gt; Epoch 145, Loss: 1.03580665982459 </span></span>
+<span id="cb13-219"><a href="#cb13-219" tabindex="-1"></a><span class="co">#&gt; Epoch 146, Loss: 1.03414789704252 </span></span>
+<span id="cb13-220"><a href="#cb13-220" tabindex="-1"></a><span class="co">#&gt; Epoch 147, Loss: 1.03576915668062 </span></span>
+<span id="cb13-221"><a href="#cb13-221" tabindex="-1"></a><span class="co">#&gt; Epoch 148, Loss: 1.03330526125333 </span></span>
+<span id="cb13-222"><a href="#cb13-222" tabindex="-1"></a><span class="co">#&gt; Epoch 149, Loss: 1.03386750644889 </span></span>
+<span id="cb13-223"><a href="#cb13-223" tabindex="-1"></a><span class="co">#&gt; Epoch 150, Loss: 1.03359244874686 </span></span>
+<span id="cb13-224"><a href="#cb13-224" tabindex="-1"></a><span class="co">#&gt; Epoch 151, Loss: 1.03498243497423 </span></span>
+<span id="cb13-225"><a href="#cb13-225" tabindex="-1"></a><span class="co">#&gt; Epoch 152, Loss: 1.03496359448788 </span></span>
+<span id="cb13-226"><a href="#cb13-226" tabindex="-1"></a><span class="co">#&gt; Epoch 153, Loss: 1.03525073764738 </span></span>
+<span id="cb13-227"><a href="#cb13-227" tabindex="-1"></a><span class="co">#&gt; Epoch 154, Loss: 1.03334255307174 </span></span>
+<span id="cb13-228"><a href="#cb13-228" tabindex="-1"></a><span class="co">#&gt; Epoch 155, Loss: 1.03530174198229 </span></span>
+<span id="cb13-229"><a href="#cb13-229" tabindex="-1"></a><span class="co">#&gt; Epoch 156, Loss: 1.03466800815803 </span></span>
+<span id="cb13-230"><a href="#cb13-230" tabindex="-1"></a><span class="co">#&gt; Epoch 157, Loss: 1.03470758071616 </span></span>
+<span id="cb13-231"><a href="#cb13-231" tabindex="-1"></a><span class="co">#&gt; Epoch 158, Loss: 1.03455781099225 </span></span>
+<span id="cb13-232"><a href="#cb13-232" tabindex="-1"></a><span class="co">#&gt; Epoch 159, Loss: 1.03544659851011 </span></span>
+<span id="cb13-233"><a href="#cb13-233" tabindex="-1"></a><span class="co">#&gt; Epoch 160, Loss: 1.03589624609829 </span></span>
+<span id="cb13-234"><a href="#cb13-234" tabindex="-1"></a><span class="co">#&gt; Epoch 161, Loss: 1.03390547362241 </span></span>
+<span id="cb13-235"><a href="#cb13-235" tabindex="-1"></a><span class="co">#&gt; Epoch 162, Loss: 1.03417332507362 </span></span>
+<span id="cb13-236"><a href="#cb13-236" tabindex="-1"></a><span class="co">#&gt; Epoch 163, Loss: 1.03435868763727 </span></span>
+<span id="cb13-237"><a href="#cb13-237" tabindex="-1"></a><span class="co">#&gt; Epoch 164, Loss: 1.03415458901855 </span></span>
+<span id="cb13-238"><a href="#cb13-238" tabindex="-1"></a><span class="co">#&gt; Epoch 165, Loss: 1.03508637365231 </span></span>
+<span id="cb13-239"><a href="#cb13-239" tabindex="-1"></a><span class="co">#&gt; Epoch 166, Loss: 1.03629180665844 </span></span>
+<span id="cb13-240"><a href="#cb13-240" tabindex="-1"></a><span class="co">#&gt; Epoch 167, Loss: 1.03295670215749 </span></span>
+<span id="cb13-241"><a href="#cb13-241" tabindex="-1"></a><span class="co">#&gt; Epoch 168, Loss: 1.0351449389103 </span></span>
+<span id="cb13-242"><a href="#cb13-242" tabindex="-1"></a><span class="co">#&gt; Epoch 169, Loss: 1.03268480251643 </span></span>
+<span id="cb13-243"><a href="#cb13-243" tabindex="-1"></a><span class="co">#&gt; Epoch 170, Loss: 1.03466008615888 </span></span>
+<span id="cb13-244"><a href="#cb13-244" tabindex="-1"></a><span class="co">#&gt; Epoch 171, Loss: 1.03338068034038 </span></span>
+<span id="cb13-245"><a href="#cb13-245" tabindex="-1"></a><span class="co">#&gt; Epoch 172, Loss: 1.03363927632324 </span></span>
+<span id="cb13-246"><a href="#cb13-246" tabindex="-1"></a><span class="co">#&gt; Epoch 173, Loss: 1.0363231724944 </span></span>
+<span id="cb13-247"><a href="#cb13-247" tabindex="-1"></a><span class="co">#&gt; Epoch 174, Loss: 1.03551538916659 </span></span>
+<span id="cb13-248"><a href="#cb13-248" tabindex="-1"></a><span class="co">#&gt; Epoch 175, Loss: 1.03439953603035 </span></span>
+<span id="cb13-249"><a href="#cb13-249" tabindex="-1"></a><span class="co">#&gt; Epoch 176, Loss: 1.03352252018353 </span></span>
+<span id="cb13-250"><a href="#cb13-250" tabindex="-1"></a><span class="co">#&gt; Epoch 177, Loss: 1.03407083562583 </span></span>
+<span id="cb13-251"><a href="#cb13-251" tabindex="-1"></a><span class="co">#&gt; Epoch 178, Loss: 1.03486034840592 </span></span>
+<span id="cb13-252"><a href="#cb13-252" tabindex="-1"></a><span class="co">#&gt; Epoch 179, Loss: 1.03393352228748 </span></span>
+<span id="cb13-253"><a href="#cb13-253" tabindex="-1"></a><span class="co">#&gt; Epoch 180, Loss: 1.03564327462646 </span></span>
+<span id="cb13-254"><a href="#cb13-254" tabindex="-1"></a><span class="co">#&gt; Epoch 181, Loss: 1.03357902046078 </span></span>
+<span id="cb13-255"><a href="#cb13-255" tabindex="-1"></a><span class="co">#&gt; Epoch 182, Loss: 1.03348998245129 </span></span>
+<span id="cb13-256"><a href="#cb13-256" tabindex="-1"></a><span class="co">#&gt; Epoch 183, Loss: 1.03442562119035 </span></span>
+<span id="cb13-257"><a href="#cb13-257" tabindex="-1"></a><span class="co">#&gt; Epoch 184, Loss: 1.03362094961907 </span></span>
+<span id="cb13-258"><a href="#cb13-258" tabindex="-1"></a><span class="co">#&gt; Epoch 185, Loss: 1.03411373668466 </span></span>
+<span id="cb13-259"><a href="#cb13-259" tabindex="-1"></a><span class="co">#&gt; Epoch 186, Loss: 1.03354163406309 </span></span>
+<span id="cb13-260"><a href="#cb13-260" tabindex="-1"></a><span class="co">#&gt; Epoch 187, Loss: 1.03528120054686 </span></span>
+<span id="cb13-261"><a href="#cb13-261" tabindex="-1"></a><span class="co">#&gt; Epoch 188, Loss: 1.03517961748375 </span></span>
+<span id="cb13-262"><a href="#cb13-262" tabindex="-1"></a><span class="co">#&gt; Epoch 189, Loss: 1.03261920489556 </span></span>
+<span id="cb13-263"><a href="#cb13-263" tabindex="-1"></a><span class="co">#&gt; Epoch 190, Loss: 1.03494631012609 </span></span>
+<span id="cb13-264"><a href="#cb13-264" tabindex="-1"></a><span class="co">#&gt; Epoch 191, Loss: 1.03532689415719 </span></span>
+<span id="cb13-265"><a href="#cb13-265" tabindex="-1"></a><span class="co">#&gt; Epoch 192, Loss: 1.0337041843036 </span></span>
+<span id="cb13-266"><a href="#cb13-266" tabindex="-1"></a><span class="co">#&gt; Epoch 193, Loss: 1.03592358837443 </span></span>
+<span id="cb13-267"><a href="#cb13-267" tabindex="-1"></a><span class="co">#&gt; Epoch 194, Loss: 1.03351840844824 </span></span>
+<span id="cb13-268"><a href="#cb13-268" tabindex="-1"></a><span class="co">#&gt; Epoch 195, Loss: 1.03348295599961 </span></span>
+<span id="cb13-269"><a href="#cb13-269" tabindex="-1"></a><span class="co">#&gt; Epoch 196, Loss: 1.03545664361686 </span></span>
+<span id="cb13-270"><a href="#cb13-270" tabindex="-1"></a><span class="co">#&gt; Epoch 197, Loss: 1.03350824856561 </span></span>
+<span id="cb13-271"><a href="#cb13-271" tabindex="-1"></a><span class="co">#&gt; Epoch 198, Loss: 1.0340895637993 </span></span>
+<span id="cb13-272"><a href="#cb13-272" tabindex="-1"></a><span class="co">#&gt; Epoch 199, Loss: 1.0344114456295 </span></span>
+<span id="cb13-273"><a href="#cb13-273" tabindex="-1"></a><span class="co">#&gt; Epoch 200, Loss: 1.03306640278209</span></span>
+<span id="cb13-274"><a href="#cb13-274" tabindex="-1"></a></span>
+<span id="cb13-275"><a href="#cb13-275" tabindex="-1"></a></span>
+<span id="cb13-276"><a href="#cb13-276" tabindex="-1"></a>fitted_scorch_model<span class="sc">$</span><span class="fu">eval</span>()</span>
+<span id="cb13-277"><a href="#cb13-277" tabindex="-1"></a></span>
+<span id="cb13-278"><a href="#cb13-278" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.matrix</span>(test_data[, <span class="sc">-</span><span class="dv">1</span>]), <span class="at">dtype =</span> <span class="fu">torch_float</span>())</span>
+<span id="cb13-279"><a href="#cb13-279" tabindex="-1"></a>y_test <span class="ot">&lt;-</span> <span class="fu">torch_tensor</span>(<span class="fu">as.integer</span>(test_data<span class="sc">$</span>action_taken), <span class="at">dtype =</span> <span class="fu">torch_long</span>())</span>
+<span id="cb13-280"><a href="#cb13-280" tabindex="-1"></a></span>
+<span id="cb13-281"><a href="#cb13-281" tabindex="-1"></a>output <span class="ot">&lt;-</span> <span class="fu">fitted_scorch_model</span>(x_test)</span>
+<span id="cb13-282"><a href="#cb13-282" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">torch_argmax</span>(output, <span class="at">dim =</span> <span class="dv">2</span>)</span>
+<span id="cb13-283"><a href="#cb13-283" tabindex="-1"></a></span>
+<span id="cb13-284"><a href="#cb13-284" tabindex="-1"></a>accuracy <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred <span class="sc">==</span> y_test)<span class="sc">$</span><span class="fu">item</span>() <span class="sc">/</span> <span class="fu">length</span>(y_test)</span>
+<span id="cb13-285"><a href="#cb13-285" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Test Accuracy: %.2f%%</span><span class="sc">\n</span><span class="st">&quot;</span>, accuracy <span class="sc">*</span> <span class="dv">100</span>))</span>
+<span id="cb13-286"><a href="#cb13-286" tabindex="-1"></a><span class="co">#&gt; Test Accuracy: 41.58%</span></span></code></pre></div>
+<blockquote>
+<p>The accuracy was the lowest using the normalized data!</p>
+</blockquote>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
