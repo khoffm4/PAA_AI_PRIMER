@@ -21,7 +21,7 @@ This exercise demonstrates how LASSO, while somewhat effective at addressing the
 
 ## Exercise Objectives
 
-Your task is to implement the following experiment:
+Your task is to implement the following experiment from: *Zhao, P., & Yu, B. (1970, January 1). On model selection consistency of lasso. Journal of Machine Learning Research. http://jmlr.org/papers/v7/zhao06a.html* :
 
 ### Data Generation
 1. Generate 1,000 samples where X₁, X₂, e, and ε follow a standard normal distribution (μ = 0, σ = 1)
