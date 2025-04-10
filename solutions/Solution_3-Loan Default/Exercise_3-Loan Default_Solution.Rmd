@@ -1,0 +1,229 @@
+## Study Design and Algorithmic Bias
+
+The principle "garbage in, garbage out" remains fundamental in data science. This exercise demonstrates how even well-implemented models cannot overcome the limitations of poor-quality data—a challenge that becomes increasingly significant in our current data landscape.
+
+### Objectives
+
+Our goal is this exercise is to illustrate how flaws in sampling design direct affect model predictions in ways that can perpetuate or amplify existing biases in various algorithmics. 
+
+
+### Procedure
+
+1. **Data Acquisition**
+   
+   Download the dataset `Loan_Application_Data_subset.csv`, containing 10,000 randomly selected records from the [2023 FFIEC national loan-level dataset](https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023), which encompasses national-level data on all home loans issued in the United States during 2023.
+
+2. **Data Partitioning**
+   
+   First remove any loans that were not accepted:
+   - A loan is denoted as accepted if it has loan_data$action_taken == 1
+   
+   Divide the dataset into two segments:
+   - Training set: First 3,000 loan records
+   - Test set: Remaining 1,955 loan records
+   
+   The training set will be used to develop a deliberately biased model to demonstrate how this bias affects subsequent analysis.
+   
+```{r}
+# Load the dataset
+loan_data <- read.csv("Loan_Application_Data_subset.csv")
+
+loan_data = loan_data[loan_data$action_taken == 1,]
+
+str(loan_data)
+
+# View the first few rows
+head(loan_data)
+
+# Summary statistics
+summary(loan_data)
+
+# Check for missing values
+colSums(is.na(loan_data))
+```
+   
+
+3. **Initial Data Analysis**
+   
+   Before manipulation, examine the dataset using linear regression and the LASSO model provided in `Lending_LASSO.R`. 
+   
+   -Make a model that predicts loan amount [loan_amount] based on income [income], interest rate [interest_rate], sex [derived_sex], and race [derived_race] of the applicant.
+   - Analyze the relationships between these predictor variables and loan amount
+   - Compare LASSO results with standard linear regression outputs
+   
+```{r data_partition}
+# Create training and test sets
+train_data <- loan_data[1:3000, ]
+test_data <- loan_data[3001:4955, ]
+train_data = train_data[,c('action_taken','loan_amount','income','interest_rate','derived_sex','derived_race')]
+train_data = train_data[complete.cases(train_data),]
+test_data = test_data[,c('action_taken','loan_amount','income','interest_rate','derived_sex','derived_race')]
+test_data = test_data[complete.cases(test_data),]
+
+train_data$interest_rate = as.numeric(train_data$interest_rate)
+test_data$interest_rate = as.numeric(test_data$interest_rate)
+
+
+# Verify the dimensions
+dim(train_data)
+dim(test_data)
+```
+
+4. **Creating a Biased Dataset**
+   
+   To mimic the effect of a biased sample design, create a new dataset from the training data which oversamples low income female. For each datapoints in this biased sample:
+   - Include female applicants with less than the median loan amount with 80% probability
+   - Include non-female applicants (male, joint, or undisclosed) with 20% probability
+   
+   
+   
+```{r create_biased_data}
+# Function to create biased dataset with specified sampling probabilities
+create_biased_data <- function(data, female_prob = 0.8, non_female_prob = 0.2) {
+  set.seed(456)
+  
+  # Create separate subsets for female and non-female applicants
+  female_applicants <- data[((data$derived_sex == "Female")&(data$loan_amount <= 225000)), ]
+  non_female_applicants <- data[!(((data$derived_sex == "Female")&(data$loan_amount <= 225000))), ]
+  
+  # Sample with specified probabilities
+  female_sample <- female_applicants[sample(nrow(female_applicants), 
+                                           size = round(nrow(female_applicants) * female_prob)), ]
+  
+  non_female_sample <- non_female_applicants[sample(nrow(non_female_applicants), 
+                                                    size = round(nrow(non_female_applicants) * non_female_prob)), ]
+  
+  # Combine the samples to create the biased dataset
+  biased_data <- rbind(female_sample, non_female_sample)
+  
+  # Shuffle the rows to mix the data
+  biased_data <- biased_data[sample(nrow(biased_data)), ]
+  
+  return(biased_data)
+}
+
+
+biased_train_data = create_biased_data(train_data)
+biased_train_data = biased_train_data[complete.cases(biased_train_data),]
+```
+
+5. **Model Comparison**
+   
+   - Fit a linear regression to both the biased and unbiased training dataset.
+   - Generate loan amount predictions using the biased and unbiased linear regressions
+   - Compare the predictions made using the biased and unbiased linear regressions. Are there any patterns in the errors?
+   - Analyze prediction accuracy stratified by applicant demographics and identify whether certain groups receive better or worse estimates
+   -If time, repeat the above with LASSO and random Forest
+   
+```{r model_comparison}
+# Create model matrix for LASSO on biased data
+x_biased <- model.matrix(~ income + interest_rate + factor(derived_sex) + factor(derived_race) , data = biased_train_data)
+y_biased <- biased_train_data$loan_amount
+
+#linear regression
+lm_model_biased <- lm(log(loan_amount) ~ income + interest_rate + factor(derived_sex), data = biased_train_data)
+
+
+#linear regression
+lm_model_unbiased <- lm(log(loan_amount) ~ income + interest_rate + factor(derived_sex) , data = train_data)
+
+
+```
+
+#Random forest 
+```{r}
+library(randomForest)
+rf_biased <- randomForest(log(loan_amount)~., data=biased_train_data, proximity=TRUE)
+
+rf_unbiased <- randomForest(log(loan_amount)~., data=train_data[complete.cases(train_data),], proximity=TRUE)
+
+
+```
+
+
+   
+
+```{r}
+#x_test <- model.matrix(~ income + interest_rate + factor(derived_sex) , data = test_data)
+
+y_test <- log(test_data$loan_amount)
+y_hat = (predict(lm_model_unbiased,newdata = test_data))
+y_hat_biased =  (predict(lm_model_biased,newdata = test_data))
+
+
+plot(y_test,y_hat)
+abline(a=0,b=1)
+
+plot(y_test,y_hat_biased)
+abline(a=0,b=1)
+
+plot(y_test[test_data$derived_sex == 'Female'],y_hat[test_data$derived_sex == 'Female'], ylim = c(9,14), xlim = c(9,14))
+abline(a=0,b=1)
+
+plot(y_test[test_data$derived_sex == 'Female'],y_hat_biased[test_data$derived_sex == 'Female'], ylim = c(9,14), xlim = c(9,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Female'], y_hat_biased[test_data$derived_sex == 'Female'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Male'], y_hat_biased[test_data$derived_sex == 'Male'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Joint'], y_hat_biased[test_data$derived_sex == 'Joint'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Sex Not Available'], y_hat_biased[test_data$derived_sex == 'Sex Not Available'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+
+
+```
+
+```{r}
+y_test <- log(test_data$loan_amount)
+y_hat = (predict(rf_unbiased,newdata = test_data))
+y_hat_biased =  (predict(rf_biased,newdata = test_data))
+
+
+plot(y_test,y_hat)
+abline(a=0,b=1)
+
+plot(y_test,y_hat_biased)
+abline(a=0,b=1)
+
+plot(y_test[test_data$derived_sex == 'Female'],y_hat[test_data$derived_sex == 'Female'], ylim = c(9,14), xlim = c(9,14))
+abline(a=0,b=1)
+
+plot(y_test[test_data$derived_sex == 'Female'],y_hat_biased[test_data$derived_sex == 'Female'], ylim = c(9,14), xlim = c(9,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Female'], y_hat_biased[test_data$derived_sex == 'Female'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Male'], y_hat_biased[test_data$derived_sex == 'Male'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Joint'], y_hat_biased[test_data$derived_sex == 'Joint'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Sex Not Available'], y_hat_biased[test_data$derived_sex == 'Sex Not Available'], ylim = c(11,14), xlim = c(11,14))
+abline(a=0,b=1)
+
+
+
+```
+
+
+```{r}
+
+plot(y_hat[test_data$derived_sex == 'Male'], y_hat_biased[test_data$derived_sex == 'Male'])
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Joint'], y_hat_biased[test_data$derived_sex == 'Joint'])
+abline(a=0,b=1)
+
+plot(y_hat[test_data$derived_sex == 'Sex Not Available'], y_hat_biased[test_data$derived_sex == 'Sex Not Available'])
+abline(a=0,b=1)
+```
+
+   

@@ -1,0 +1,158 @@
+## The Impact of Data Bias on Model Performance
+
+The principle "garbage in, garbage out" remains fundamental in data science. This exercise demonstrates how even well-implemented models cannot overcome the limitations of poor-quality data—a challenge that becomes increasingly significant in our current data landscape dominated by synthetically generated information.
+
+### Objectives
+
+This exercise will illustrate how sampling bias affects model predictions and can perpetuate or amplify existing biases in lending data.
+
+### Procedure
+
+1. **Data Acquisition**
+   
+   Download the dataset `Loan_Application_Data_subset.csv`, containing 10,000 randomly selected records from the [2023 FFIEC national loan-level dataset](https://ffiec.cfpb.gov/data-publication/dynamic-national-loan-level-dataset/2023), which encompasses national-level data on all home loans issued in the United States during 2023.
+
+2. **Data Partitioning**
+   
+   Divide the dataset into two segments:
+   - Training set: First 8,000 loan records
+   - Test set: Remaining 2,000 loan records
+   
+   The training set will be used to develop a deliberately biased model to demonstrate how this bias affects subsequent analysis.
+   
+```{r load_data}
+# Load the dataset
+loan_data <- read.csv("Loan_Application_Data_subset.csv")
+
+# Display the structure of the dataset
+str(loan_data)
+
+# View the first few rows
+head(loan_data)
+
+# Summary statistics
+summary(loan_data)
+
+# Check for missing values
+colSums(is.na(loan_data))
+```
+   
+
+3. **Initial Data Analysis**
+   
+   Before manipulation, examine the dataset using the LASSO model provided in `Lending_LASSO.R`. This model predicts loan amount [loan_amount] based on income [income], interest rate [interest_rate], sex [derived_sex], and race [derived_race] of the applicant.
+   
+   - Analyze the relationships between these predictor variables and loan amount
+   - Compare LASSO results with standard linear regression outputs
+   - Note that this simplified model excludes several important factors, so all analyses should be considered preliminary
+   
+```{r data_partition}
+loan_data$approved = loan_data$action_taken == 2
+# Create training and test sets
+train_data <- loan_data[1:8000, ]
+test_data <- loan_data[8001:10000, ]
+train_data = train_data[,c('approved','loan_amount','income','interest_rate','derived_sex')]
+#train_data = train_data[complete.cases(train_data),]
+test_data = test_data[,c('approved','loan_amount','income','interest_rate','derived_sex')]
+#test_data = test_data[complete.cases(test_data),]
+
+train_data$interest_rate = as.numeric(train_data$interest_rate)
+test_data$interest_rate = as.numeric(test_data$interest_rate)
+
+
+# Verify the dimensions
+dim(train_data)
+dim(test_data)
+```
+
+4. **Creating a Biased Dataset**
+   
+   Transform the training data to create systematic sampling bias:
+   - Include female applicants with 80% probability
+   - Include non-female applicants (male, joint, or undisclosed) with 20% probability
+   
+   This selective sampling approach simulates the challenges of obtaining truly representative data in real-world contexts.
+   
+```{r create_biased_data}
+# Function to create biased dataset with specified sampling probabilities
+create_biased_data <- function(data, female_prob = 0.8, non_female_prob = 0.2) {
+  set.seed(456)
+  
+  # Create separate subsets for female and non-female applicants
+  female_applicants <- data[((data$derived_sex == "Female")&(data$approved == 1)), ]
+  non_female_applicants <- data[!(((data$derived_sex == "Female")&(data$approved == 1))), ]
+  
+  # Sample with specified probabilities
+  female_sample <- female_applicants[sample(nrow(female_applicants), 
+                                           size = round(nrow(female_applicants) * female_prob)), ]
+  
+  non_female_sample <- non_female_applicants[sample(nrow(non_female_applicants), 
+                                                    size = round(nrow(non_female_applicants) * non_female_prob)), ]
+  
+  # Combine the samples to create the biased dataset
+  biased_data <- rbind(female_sample, non_female_sample)
+  
+  # Shuffle the rows to mix the data
+  biased_data <- biased_data[sample(nrow(biased_data)), ]
+  
+  return(biased_data)
+}
+
+
+biased_train_data = create_biased_data(train_data)
+```
+
+5. **Model Comparison**
+   
+   Fit both linear regression and LASSO models to the biased dataset.
+   - Compare the resulting regression coefficients with those from the unbiased model
+   - Document how sampling bias influences parameter estimates
+   
+```{r model_comparison}
+# Create model matrix for LASSO on biased data
+x_biased <- model.matrix(~ income + interest_rate + factor(derived_sex) , data = biased_train_data)
+y_biased <- biased_train_data$approved
+
+#linear regression
+lm_model_biased <- glm(approved ~ income + interest_rate + factor(derived_sex) , data = biased_train_data,family = 'binomial')
+
+
+#linear regression
+lm_model_unbiased <- glm(approved ~ income + interest_rate + factor(derived_sex), data = train_data,family = 'binomial')
+
+
+
+
+```
+
+
+
+
+6. **Prediction Evaluation**
+   
+   Apply the biased models to the test dataset:
+   - Generate loan amount predictions
+   - Analyze prediction accuracy stratified by applicant sex and race
+   - Identify whether certain demographic groups receive systematically better or worse estimates
+   
+```{r}
+
+plot(predict(lm_model_biased,newdata = test_data,type = 'response'), predict(lm_model_unbiased,newdata = test_data,type = 'response'))
+```
+   
+   
+   
+   
+```{r}
+summary(lm_model_biased)
+summary(lm_model_unbiased)
+```
+   
+
+7. **Sensitivity Analysis**
+   
+   Vary the 80/20 probability split used in step 4 to create datasets with different levels of bias:
+   - Implement a range of sampling probabilities
+   - Assess how varying degrees of sampling bias affect prediction accuracy
+   - Determine the threshold at which sampling bias begins to significantly compromise model performance
+   - Establish criteria for "reasonable" accuracy and identify the maximum tolerable sampling bias
