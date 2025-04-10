@@ -1,4 +1,5 @@
 library(glmnet)
+set.seed(2025)
 n = 1000
 
 x_1 = rnorm(n,mean =0, sd= 1)
@@ -25,14 +26,19 @@ lass_path_mat = as.matrix(fit$beta)
 lass_path_mat
 
 #LASSO with optimal model chosen by cross validation
-cv_model  = cv.glmnet(X,y,alpha=1,standardize = T)
+cv_model  = cv.glmnet(X,y,alpha= 1,standardize = T)
 best_lambda <- cv_model$lambda.min
 
 #Prediction Error over lambda 
 plot(cv_model)
-
-best_model <- glmnet(X, y, alpha = 1, lambda = best_lambda)
+best_model <- glmnet(X, y, alpha= 1,lambda = best_lambda)
 coef(best_model)
+
+#when lambda=0 you get the same solution as normal linear regression (alpha=0 is ridge regression)
+linear_reg_lasso <- glmnet(X, y, alpha = 1, lambda = 0)
+coef(linear_reg_lasso)
+summary(lm(y~X))
+
 
 #In glmnet, lambda is sometimes on the log scale. To align this with the lasso path, take the exponential
 exp(best_lambda)
