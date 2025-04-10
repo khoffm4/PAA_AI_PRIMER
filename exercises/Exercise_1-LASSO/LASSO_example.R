@@ -10,7 +10,7 @@ beta_1 = 0.5
 beta_2 = 0.9
 y = x_1 * beta_1 + x_2 * beta_2 + epsilon
 #note: Intercepts have to manually be added in the glmnet package
-X = cbind(1,x_1, x_2,x_3)
+X = cbind(x_1, x_2,x_3)
 
 
 #LASSO regression
@@ -30,7 +30,6 @@ best_lambda <- cv_model$lambda.min
 
 #Prediction Error over lambda 
 plot(cv_model)
-
 
 best_model <- glmnet(X, y, alpha = 1, lambda = best_lambda)
 coef(best_model)
